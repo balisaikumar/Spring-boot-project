@@ -12,7 +12,7 @@
 	<artifactId>HCMS</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Health Care Management System</name>
-	<description>Demo project for Spring Boot</description>
+	<description>Project related to health care management system</description>
 
 	<properties>
 		<java.version>17</java.version>
