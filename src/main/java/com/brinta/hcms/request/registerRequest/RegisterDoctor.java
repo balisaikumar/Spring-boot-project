@@ -1,4 +1,4 @@
-package com.brinta.hcms.request.RegisterRequest;
+package com.brinta.hcms.request.registerRequest;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

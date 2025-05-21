@@ -2,8 +2,8 @@ package com.brinta.hcms.mapper;
 
 import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.entity.Doctor;
-import com.brinta.hcms.request.RegisterRequest.RegisterDoctor;
-import com.brinta.hcms.request.UpdateRequest.UpdateDoctorRequest;
+import com.brinta.hcms.request.registerRequest.RegisterDoctor;
+import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;

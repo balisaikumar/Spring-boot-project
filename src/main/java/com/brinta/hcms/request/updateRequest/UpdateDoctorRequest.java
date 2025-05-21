@@ -1,4 +1,4 @@
-package com.brinta.hcms.request.UpdateRequest;
+package com.brinta.hcms.request.updateRequest;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
