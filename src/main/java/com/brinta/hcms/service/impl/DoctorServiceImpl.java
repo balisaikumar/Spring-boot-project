@@ -1,13 +1,16 @@
 package com.brinta.hcms.service.impl;
 
-import com.brinta.hcms.dto.DoctorDto;
-import com.brinta.hcms.entity.Doctor;
+import com.brinta.hcms.dto.DoctorProfileDto;
+import com.brinta.hcms.entity.DoctorProfile;
+import com.brinta.hcms.entity.User;
+import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.mapper.DoctorMapper;
 import com.brinta.hcms.repository.DoctorRepository;
-import com.brinta.hcms.request.registerRequest.RegisterDoctor;
+import com.brinta.hcms.repository.UserRepo;
+import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import com.brinta.hcms.service.DoctorService;
 import lombok.AllArgsConstructor;
@@ -15,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,41 +35,47 @@ public class DoctorServiceImpl implements DoctorService {
     @Autowired
     private DoctorRepository doctorRepository;
 
-    @Override
-    public Doctor register(RegisterDoctor registerDoctor) {
+    @Autowired
+    private UserRepo userRepo;
 
-        // Check if email or contact already exists
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public DoctorProfile register(RegisterDoctorRequest registerDoctor) {
+
         boolean emailExists = doctorRepository.existsByEmail(registerDoctor.getEmail());
-        boolean contactExists = doctorRepository.existsByContact(registerDoctor.getContact());
+        boolean contactExists = doctorRepository.existsByContactNumber(registerDoctor.getContactNumber());
 
         if (emailExists || contactExists) {
-
             StringBuilder errorMessage = new StringBuilder("Already Exists: ");
-
-            if (emailExists) {
-                errorMessage.append("Email: ").append(registerDoctor.getEmail());
-            }
-            if (emailExists && contactExists) {
-                errorMessage.append(" | ");
-            }
-            if (contactExists) {
-                errorMessage.append("Contact: ").append(registerDoctor.getContact());
-            }
-
+            if (emailExists) errorMessage.append("Email: ").append(registerDoctor.getEmail());
+            if (emailExists && contactExists) errorMessage.append(" | ");
+            if (contactExists) errorMessage.append("Contact: ").append(registerDoctor.getContactNumber());
             throw new DuplicateEntryException(errorMessage.toString());
         }
 
-        Doctor doctor = doctorMapper.register(registerDoctor);
+        String passwordEncode = passwordEncoder.encode(registerDoctor.getPassword());
 
-        return doctorRepository.save(doctor);
+        User saveUser = new User();
+        saveUser.setUsername(registerDoctor.getUserName());
+        saveUser.setEmail(registerDoctor.getEmail());
+        saveUser.setPassword(passwordEncode);
+        saveUser.setRole(Roles.DOCTOR);
 
+        DoctorProfile doctor = doctorMapper.register(registerDoctor);
+        doctor.setUser(saveUser);
+        saveUser.setDoctorProfile(doctor);
+
+        userRepo.save(saveUser); // saves both user and doctor due to CascadeType.ALL
+
+        return doctor;
     }
 
     @Override
-    public Doctor update(Long doctorId, UpdateDoctorRequest updateDoctorRequest) {
+    public DoctorProfile update(Long doctorId, UpdateDoctorRequest updateDoctorRequest) {
 
         // Check if doctor exists
-        Doctor doctor = doctorRepository.findById(doctorId)
+        DoctorProfile doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new
                         ResourceNotFoundException("The entered ID is not valid in the Database"));
 
@@ -76,15 +86,15 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public List<DoctorDto> findBy(Long doctorId, String contact, String email) {
+    public List<DoctorProfileDto> findBy(Long doctorId, String contactNumber, String email) {
 
         //Check Null Input Values
-        if (doctorId == null && (contact == null || contact.isEmpty())
+        if (doctorId == null && (contactNumber == null || contactNumber.isEmpty())
                 && (email == null || email.isEmpty())) {
             throw new ResourceNotFoundException("Enter Correct Input");
         }
 
-        Optional<Doctor> doctor = doctorRepository.findByIdOrContactOrEmail(doctorId, contact, email);
+        Optional<DoctorProfile> doctor = doctorRepository.findByIdOrContactNumberOrEmail(doctorId, contactNumber, email);
 
         if (doctor.isEmpty()) {
             throw new ResourceNotFoundException("No Matching Doctor found in Database");
@@ -95,7 +105,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public Page<DoctorDto> getWithPagination(int page, int size) {
+    public Page<DoctorProfileDto> getWithPagination(int page, int size) {
 
         if (page < 0 || size <= 0) {
             throw new
@@ -104,7 +114,7 @@ public class DoctorServiceImpl implements DoctorService {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<Doctor> parentPage = doctorRepository.findAll(pageable);
+        Page<DoctorProfile> parentPage = doctorRepository.findAll(pageable);
 
         if (parentPage.isEmpty()) {
             return Page.empty();
@@ -118,8 +128,8 @@ public class DoctorServiceImpl implements DoctorService {
     public void delete(Long doctorId) {
 
         //Find Doctor
-        Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(()-> new ResourceNotFoundException("Doctor Not Found"));
+        DoctorProfile doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor Not Found"));
 
         //Delete Doctor
         doctorRepository.delete(doctor);

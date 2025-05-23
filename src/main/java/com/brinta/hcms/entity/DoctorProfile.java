@@ -1,12 +1,15 @@
 package com.brinta.hcms.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "Doctor")
@@ -31,7 +34,7 @@ public class DoctorProfile {
     private String qualification;
 
     @OneToOne(cascade = CascadeType.ALL)
+    @JsonBackReference
     private User user;
 
 }
-

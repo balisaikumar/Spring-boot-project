@@ -2,9 +2,8 @@ package com.brinta.hcms.service;
 
 import com.brinta.hcms.dto.DoctorProfileDto;
 import com.brinta.hcms.dto.UserDto;
-import com.brinta.hcms.request.LoginRequest;
-import com.brinta.hcms.request.RegisterDoctorRequest;
-import com.brinta.hcms.request.RegisterPatientRequest;
+import com.brinta.hcms.request.registerRequest.LoginRequest;
+import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 
 public interface UserService {
 
@@ -12,9 +11,8 @@ public interface UserService {
 
     UserDto login(LoginRequest request);
 
-    DoctorProfileDto registerDoctor(RegisterDoctorRequest request);
+//    DoctorProfileDto registerDoctor(RegisterDoctorRequest request);
 
     DoctorProfileDto doctorLogin(LoginRequest request);
 
 }
-

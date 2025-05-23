@@ -1,4 +1,4 @@
-package com.brinta.hcms.request;
+package com.brinta.hcms.request.registerRequest;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -20,7 +20,7 @@ public class RegisterDoctorRequest {
     @NotBlank(message = "Password is required")
     private String password;
 
-    @NotBlank(message = "Specialization is required")
+    @NotBlank(message = "specialization is required")
     private String specialization;
 
     @NotBlank(message = "Phone is required")
@@ -30,4 +30,3 @@ public class RegisterDoctorRequest {
     private String qualification;
 
 }
-

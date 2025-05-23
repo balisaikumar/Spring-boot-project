@@ -1,18 +1,18 @@
 package com.brinta.hcms.repository;
 
-import com.brinta.hcms.entity.Doctor;
+import com.brinta.hcms.entity.DoctorProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface DoctorRepository extends JpaRepository<Doctor, Long> {
+public interface DoctorRepository extends JpaRepository<DoctorProfile, Long> {
 
     boolean existsByEmail(String mail);
 
-    boolean existsByContact(String contact);
+    boolean existsByContactNumber(String contactNumber);
 
-    Optional<Doctor> findByIdOrContactOrEmail(Long doctorID, String contact, String email);
+    Optional<DoctorProfile> findByIdOrContactNumberOrEmail(Long doctorID, String contactNumber, String email);
 
 }

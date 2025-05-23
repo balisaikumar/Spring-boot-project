@@ -1,13 +1,13 @@
 package com.brinta.hcms.entity;
 
 import com.brinta.hcms.enums.Roles;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "user")
@@ -33,7 +33,7 @@ public class User {
     private PatientProfile patientProfile;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private DoctorProfile doctorProfile;
 
 }
-

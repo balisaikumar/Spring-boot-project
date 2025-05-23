@@ -1,7 +1,7 @@
-package com.brinta.hcms.mappers;
+package com.brinta.hcms.mapper;
 
 import com.brinta.hcms.entity.PatientProfile;
-import com.brinta.hcms.request.RegisterPatientRequest;
+import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

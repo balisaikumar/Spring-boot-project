@@ -2,18 +2,15 @@ package com.brinta.hcms.service.impl;
 
 import com.brinta.hcms.dto.DoctorProfileDto;
 import com.brinta.hcms.dto.UserDto;
-import com.brinta.hcms.entity.DoctorProfile;
 import com.brinta.hcms.entity.PatientProfile;
 import com.brinta.hcms.entity.User;
-import com.brinta.hcms.enums.Roles;
-import com.brinta.hcms.exceptions.EmailAlreadyExistsException;
-import com.brinta.hcms.mappers.DoctorMapper;
-import com.brinta.hcms.mappers.PatientMapper;
-import com.brinta.hcms.mappers.UserMapper;
+import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
+import com.brinta.hcms.mapper.DoctorMapper;
+import com.brinta.hcms.mapper.PatientMapper;
+import com.brinta.hcms.mapper.UserMapper;
 import com.brinta.hcms.repository.UserRepo;
-import com.brinta.hcms.request.LoginRequest;
-import com.brinta.hcms.request.RegisterDoctorRequest;
-import com.brinta.hcms.request.RegisterPatientRequest;
+import com.brinta.hcms.request.registerRequest.LoginRequest;
+import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -53,29 +50,29 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
     }
 
-    @Override
-    public DoctorProfileDto registerDoctor(RegisterDoctorRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException("Email already exists");
-        }
-
-        DoctorProfile profile = doctorMapper.toEntity(request);
-
-        User user = new User();
-        user.setUsername(request.getUserName());
-        user.setEmail(request.getEmail());
-        user.setRole(Roles.DOCTOR);
-
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
-        user.setPassword(encodedPassword);
-
-        profile.setUser(user);
-        user.setDoctorProfile(profile);
-
-        userRepository.save(user);
-
-        return doctorMapper.toDto(profile);
-    }
+//    @Override
+//    public DoctorProfileDto registerDoctor(RegisterDoctorRequest request) {
+//        if (userRepository.existsByEmail(request.getEmail())) {
+//            throw new EmailAlreadyExistsException("Email already exists");
+//        }
+//
+//        DoctorProfile profile = doctorMapper.register(request);
+//
+//        User user = new User();
+//        user.setUsername(request.getUserName());
+//        user.setEmail(request.getEmail());
+//        user.setRole(Roles.DOCTOR);
+//
+//        String encodedPassword = passwordEncoder.encode(request.getPassword());
+//        user.setPassword(encodedPassword);
+//
+//        profile.setUser(user);
+//        user.setDoctorProfile(profile);
+//
+//        userRepository.save(user);
+//
+//        return doctorMapper.toDto(profile);
+//    }
 
     @Override
     public DoctorProfileDto doctorLogin(LoginRequest request) {

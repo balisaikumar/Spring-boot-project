@@ -1,8 +1,8 @@
 package com.brinta.hcms.service;
 
-import com.brinta.hcms.dto.DoctorDto;
-import com.brinta.hcms.entity.Doctor;
-import com.brinta.hcms.request.registerRequest.RegisterDoctor;
+import com.brinta.hcms.dto.DoctorProfileDto;
+import com.brinta.hcms.entity.DoctorProfile;
+import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import org.springframework.data.domain.Page;
 
@@ -10,13 +10,13 @@ import java.util.List;
 
 public interface DoctorService {
 
-    Doctor register(RegisterDoctor registerDoctor);
+    DoctorProfile register(RegisterDoctorRequest registerDoctor);
 
-    Doctor update(Long doctorId, UpdateDoctorRequest updateDoctorRequest);
+    DoctorProfile update(Long doctorId, UpdateDoctorRequest updateDoctorRequest);
 
-    List<DoctorDto> findBy(Long doctorId, String contact, String email);
+    List<DoctorProfileDto> findBy(Long doctorId, String contactNumber, String email);
 
-    Page<DoctorDto> getWithPagination(int page, int size);
+    Page<DoctorProfileDto> getWithPagination(int page, int size);
 
     void delete(Long doctorId);
 

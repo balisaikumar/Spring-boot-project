@@ -1,6 +1,7 @@
 package com.brinta.hcms.exception;
 
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
+import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
 import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.response.GenericResponse;
@@ -40,6 +41,11 @@ public class GlobalException {
     @ExceptionHandler(InvalidRequestException.class)
     public ResponseEntity<?> invalidException(InvalidRequestException exception) {
         return new ResponseEntity<>(exception.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<String> handleEmailExists(EmailAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
     }
 
 }

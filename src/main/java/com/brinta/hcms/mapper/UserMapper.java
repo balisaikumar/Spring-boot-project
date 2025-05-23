@@ -1,4 +1,4 @@
-package com.brinta.hcms.mappers;
+package com.brinta.hcms.mapper;
 
 import com.brinta.hcms.dto.UserDto;
 import com.brinta.hcms.entity.User;

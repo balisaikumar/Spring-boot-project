@@ -17,7 +17,6 @@ public class UserDetailsServiceConfig {
 
     private final UserRepo userRepo;
 
-
     @Bean
     public UserDetailsService userDetailsService() {
         return email -> {

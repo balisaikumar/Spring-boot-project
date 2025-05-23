@@ -1,4 +1,4 @@
-package com.brinta.hcms.exceptions;
+package com.brinta.hcms.exception.exceptionHandler;
 
 public class EmailAlreadyExistsException extends RuntimeException {
 
@@ -7,4 +7,3 @@ public class EmailAlreadyExistsException extends RuntimeException {
     }
 
 }
-

@@ -1,9 +1,9 @@
 package com.brinta.hcms.controller;
 
 import com.brinta.hcms.dto.UserDto;
-import com.brinta.hcms.exceptions.EmailAlreadyExistsException;
-import com.brinta.hcms.request.LoginRequest;
-import com.brinta.hcms.request.RegisterPatientRequest;
+import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
+import com.brinta.hcms.request.registerRequest.LoginRequest;
+import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
