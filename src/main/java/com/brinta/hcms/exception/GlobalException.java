@@ -1,0 +1,51 @@
+package com.brinta.hcms.exception;
+
+import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
+import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
+import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
+import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
+import com.brinta.hcms.response.GenericResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestControllerAdvice
+public class GlobalException {
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException
+                                                                                  exception) {
+        Map<String, String> errors = new HashMap<>();
+        exception.getBindingResult().getFieldErrors().forEach(error ->
+                errors.put(error.getField(), error.getDefaultMessage())
+        );
+        return ResponseEntity.badRequest().body(errors);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<String> ResourceNotFound(ResourceNotFoundException exception) {
+        return new ResponseEntity<>(exception.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(DuplicateEntryException.class)
+    public ResponseEntity<?> handleEmailException(DuplicateEntryException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new GenericResponse(false, exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidRequestException.class)
+    public ResponseEntity<?> invalidException(InvalidRequestException exception) {
+        return new ResponseEntity<>(exception.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<String> handleEmailExists(EmailAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+    }
+
+}
