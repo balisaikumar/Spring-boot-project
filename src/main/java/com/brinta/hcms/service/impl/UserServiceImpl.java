@@ -13,6 +13,7 @@ import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +23,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepo userRepository;
     private final PatientMapper patientMapper;
-    private final PasswordEncoder passwordEncoder;
+//    private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final DoctorMapper doctorMapper;
 
@@ -33,9 +34,9 @@ public class UserServiceImpl implements UserService {
         }
 
         PatientProfile profile = patientMapper.toEntity(request);
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
+//        String encodedPassword = passwordEncoder.encode(request.getPassword());
 
-        profile.getUser().setPassword(encodedPassword);
+        profile.getUser().setPassword(profile.getUser().getPassword());
         profile.getUser().setPatientProfile(profile);
 
         User savedUser = userRepository.save(profile.getUser());
@@ -45,7 +46,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto login(LoginRequest request) {
         return userRepository.findByEmail(request.getEmail())
-                .filter(user -> passwordEncoder.matches(request.getPassword(), user.getPassword()))
+                .filter(user -> request.getPassword().equals(user.getPassword()))
                 .map(userMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
     }
@@ -77,7 +78,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public DoctorProfileDto doctorLogin(LoginRequest request) {
         return userRepository.findByEmail(request.getEmail())
-                .filter(user -> passwordEncoder.matches(request.getPassword(), user.getPassword()))
+                .filter(user -> request.getPassword().equals(user.getPassword()))
                 .map(user -> doctorMapper.toDto(user.getDoctorProfile()))
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
     }

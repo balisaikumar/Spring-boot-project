@@ -38,7 +38,7 @@ public class DoctorServiceImpl implements DoctorService {
     @Autowired
     private UserRepo userRepo;
 
-    private PasswordEncoder passwordEncoder;
+//    private PasswordEncoder passwordEncoder;
 
     @Override
     public DoctorProfile register(RegisterDoctorRequest registerDoctor) {
@@ -54,19 +54,19 @@ public class DoctorServiceImpl implements DoctorService {
             throw new DuplicateEntryException(errorMessage.toString());
         }
 
-        String passwordEncode = passwordEncoder.encode(registerDoctor.getPassword());
+//        String passwordEncode = passwordEncoder.encode(registerDoctor.getPassword());
 
         User saveUser = new User();
         saveUser.setUsername(registerDoctor.getUserName());
         saveUser.setEmail(registerDoctor.getEmail());
-        saveUser.setPassword(passwordEncode);
+        saveUser.setPassword(registerDoctor.getPassword());
         saveUser.setRole(Roles.DOCTOR);
 
         DoctorProfile doctor = doctorMapper.register(registerDoctor);
         doctor.setUser(saveUser);
         saveUser.setDoctorProfile(doctor);
 
-        userRepo.save(saveUser); // saves both user and doctor due to CascadeType.ALL
+        userRepo.save(saveUser);
 
         return doctor;
     }

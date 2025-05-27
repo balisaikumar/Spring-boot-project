@@ -13,14 +13,14 @@ import org.springframework.stereotype.Component;
 public class DefaultAdmin implements CommandLineRunner {
 
     private final UserRepo userRepository;
-    private final PasswordEncoder passwordEncoder;
+//    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
         if (!userRepository.existsByEmail("SaiKumar09@gmail.com")){
             User admin = new User();
             admin.setEmail("SaiKumar09@gmail.com");
-            admin.setPassword(passwordEncoder.encode("SaiKumar"));
+            admin.setPassword("SaiKumar");
             admin.setUsername("Naruto");
             admin.setRole(Roles.ADMIN);
 

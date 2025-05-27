@@ -36,4 +36,7 @@ public class User {
     @JsonManagedReference
     private DoctorProfile doctorProfile;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private AdminProfile adminProfile;
+
 }
