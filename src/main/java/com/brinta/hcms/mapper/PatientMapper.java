@@ -15,4 +15,3 @@ public interface PatientMapper {
     PatientProfile toEntity(RegisterPatientRequest request);
 
 }
-

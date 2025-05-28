@@ -20,4 +20,3 @@ public class PatientProfileDto {
     private UserDto user;
 
 }
-
