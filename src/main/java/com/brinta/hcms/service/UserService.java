@@ -9,9 +9,7 @@ public interface UserService {
 
     UserDto registerPatient(RegisterPatientRequest request);
 
-    UserDto login(LoginRequest request);
-
-//    DoctorProfileDto registerDoctor(RegisterDoctorRequest request);
+    UserDto patientLogin(LoginRequest request);
 
     DoctorProfileDto doctorLogin(LoginRequest request);
 

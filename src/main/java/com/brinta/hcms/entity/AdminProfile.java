@@ -8,8 +8,7 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "admin_profiles")
-
+@Table(name = "admin")
 public class AdminProfile {
 
     @Id
@@ -26,9 +25,8 @@ public class AdminProfile {
     private String email;
 
     @OneToOne(cascade = CascadeType.ALL)
-    @JsonBackReference
     @JoinColumn(name = "user_id")
+    @JsonBackReference
     private User user;
 
 }
-

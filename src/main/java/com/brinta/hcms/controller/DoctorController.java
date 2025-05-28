@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/doctor/api")
+@RequestMapping("/doctor")
 @Tag(name = "Doctor Profile API", description = "Operations Related to Doctor")
 @AllArgsConstructor
 public class DoctorController {
@@ -36,7 +36,7 @@ public class DoctorController {
     @Autowired
     private UserService userService;
 
-    @GetMapping("/doctor/login")
+    @GetMapping("/login")
     public ResponseEntity<?> doctorLogin(@RequestBody LoginRequest request) {
         try {
             DoctorProfileDto doctor = userService.doctorLogin(request);

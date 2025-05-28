@@ -8,21 +8,29 @@ import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.mapper.AdminMapper;
 import com.brinta.hcms.repository.AdminRepository;
 import com.brinta.hcms.repository.UserRepo;
-import com.brinta.hcms.request.registerRequest.RegisterAdminRequest;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
+import com.brinta.hcms.request.registerRequest.RegisterAdminRequest;
 import com.brinta.hcms.service.AdminService;
 import lombok.AllArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 @AllArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
-    private final AdminRepository adminRepo;
-    private final UserRepo userRepo;
-    private final AdminMapper adminMapper;
-//    private final PasswordEncoder passwordEncoder;
+    @Autowired
+    private AdminRepository adminRepo;
+
+    @Autowired
+    private UserRepo userRepo;
+
+    @Autowired
+    private AdminMapper adminMapper;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
 
     @Override
     public AdminProfile registerAdmin(RegisterAdminRequest registerAdmin) {
@@ -38,38 +46,47 @@ public class AdminServiceImpl implements AdminService {
             throw new DuplicateEntryException(errorMessage.toString());
         }
 
-//        String encodedPassword = passwordEncoder.encode(registerAdmin.getPassword());
-
+        // Create and save User entity
         User user = new User();
         user.setUsername(registerAdmin.getUserName());
         user.setEmail(registerAdmin.getEmail());
-        user.setPassword(registerAdmin.getPassword());
+        user.setPassword(passwordEncoder.encode(registerAdmin.getPassword()));
         user.setRole(Roles.ADMIN);
 
+        // Create AdminProfile
         AdminProfile admin = adminMapper.register(registerAdmin);
         admin.setUser(user);
         user.setAdminProfile(admin);
+
+        // First save Admin to generate ID if needed
+        AdminProfile savedAdmin = adminRepo.save(admin);
+
+        // Save User with a link to Admin
         userRepo.save(user);
 
-        return admin;
+        return savedAdmin;
     }
 
     @Override
     public AdminProfileDto loginAdmin(LoginRequest request) {
-        User user = userRepo.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
-
-        if (user.getRole() != Roles.ADMIN) {
-            throw new RuntimeException("Access denied: not an admin");
+        if (request.getEmail() == null || request.getPassword() == null) {
+            throw new IllegalArgumentException("Email and password must be provided");
         }
 
-//        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-//            throw new RuntimeException("Invalid email or password");
-//        }
+        AdminProfile admin = adminRepo.findByEmail(request.getEmail())
+                .orElseThrow(() ->
+                        new RuntimeException("Admin not found with email: " + request.getEmail()));
 
-        AdminProfile adminProfile = user.getAdminProfile();
+        if (admin.getUser() == null || admin.getUser().getPassword() == null) {
+            throw new RuntimeException("User credentials are missing for admin: " + request.getEmail());
+        }
 
-        return adminMapper.toDto(adminProfile);
+        if (!passwordEncoder.matches(request.getPassword(), admin.getUser().getPassword())) {
+            throw new RuntimeException("Invalid password");
+        }
+
+        return adminMapper.toDto(admin);
     }
+
 
 }

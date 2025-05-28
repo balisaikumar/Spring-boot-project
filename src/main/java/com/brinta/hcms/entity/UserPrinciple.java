@@ -1,37 +1,35 @@
 package com.brinta.hcms.entity;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 
 public class UserPrinciple implements UserDetails {
 
-    @Autowired
-    private AdminProfile adminProfile;
+    private final User user;
 
-    public UserPrinciple (AdminProfile adminProfile ){
-        this.adminProfile = adminProfile;
+    public UserPrinciple(User user) {
+        this.user = user;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(new SimpleGrantedAuthority("USER"));
+        return Collections.singleton(
+                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
+        );
     }
 
     @Override
     public String getPassword() {
-        return adminProfile.getUser().getPassword();
+        return user.getPassword();
     }
 
     @Override
     public String getUsername() {
-        return adminProfile.getEmail();
+        return user.getEmail(); // or username
     }
 
     @Override

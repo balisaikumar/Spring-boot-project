@@ -4,6 +4,8 @@ import com.brinta.hcms.entity.AdminProfile;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface AdminRepository extends JpaRepository<AdminProfile, Long> {
 
@@ -11,5 +13,5 @@ public interface AdminRepository extends JpaRepository<AdminProfile, Long> {
 
     boolean existsByContactNumber(String contactNumber);
 
-    AdminProfile findByEmail(String email);
+    Optional<AdminProfile> findByEmail(String email);
 }

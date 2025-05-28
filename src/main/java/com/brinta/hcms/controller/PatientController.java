@@ -37,7 +37,7 @@ public class PatientController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
-            UserDto user = userService.login(request);
+            UserDto user = userService.patientLogin(request);
             return ResponseEntity.status(200)
                     .body(Map.of("message","login successful","Patient",user));
         } catch (RuntimeException ex) {

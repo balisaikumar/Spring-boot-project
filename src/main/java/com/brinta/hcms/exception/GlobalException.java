@@ -1,9 +1,6 @@
 package com.brinta.hcms.exception;
 
-import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
-import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
-import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
-import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
+import com.brinta.hcms.exception.exceptionHandler.*;
 import com.brinta.hcms.response.GenericResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,8 +41,13 @@ public class GlobalException {
     }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ResponseEntity<String> handleEmailExists(EmailAlreadyExistsException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+    public ResponseEntity<String> handleEmailExists(EmailAlreadyExistsException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(exception.getMessage());
+    }
+
+    @ExceptionHandler(UnAuthException.class)
+    public ResponseEntity<String> unAuthorizedException(UnAuthException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
     }
 
 }
