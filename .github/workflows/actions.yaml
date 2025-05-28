@@ -2,7 +2,7 @@ name: auto trigger and deploy
 on:
   push:
     branches:
-      - dev
+      - Devops
 jobs:
   build:
     runs-on: ubuntu-latest
