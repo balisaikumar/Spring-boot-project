@@ -37,7 +37,7 @@ jobs:
       - name: Deploy WAR on Lightsail
         run: |
           ssh -i lightsail_key.pem -o StrictHostKeyChecking=no ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
-            sudo mv /home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.jar /home/ec2-user/apache-tomcat-9.0.105/webapps
+            sudo mv /home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.jar /home/ec2-user/apache-tomcat-9.0.105/lib
             cd /home/ec2-user/apache-tomcat-9.0.105/bin
             sudo ./startup.sh
           EOF
