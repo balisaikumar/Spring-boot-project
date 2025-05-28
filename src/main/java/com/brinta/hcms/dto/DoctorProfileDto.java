@@ -18,3 +18,4 @@ public class DoctorProfileDto {
     private String qualification;
 
 }
+

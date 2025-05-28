@@ -25,7 +25,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Public login endpoints
-                        .requestMatchers("/admin/login", "/doctor/api/doctor/login").permitAll()
+                        .requestMatchers("/admin/login", "/doctor/login","/Patient/register",
+                                "/Patient/login").permitAll()
 
                         // Admin registration — only accessible by SUPER_ADMIN
                         .requestMatchers("/admin/register").hasRole("SUPER_ADMIN")
@@ -61,3 +62,4 @@ public class SecurityConfig {
     }
 
 }
+

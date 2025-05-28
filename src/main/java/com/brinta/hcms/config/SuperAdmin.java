@@ -35,3 +35,4 @@ public class SuperAdmin implements CommandLineRunner {
     }
 
 }
+

@@ -38,3 +38,4 @@ public class DoctorProfile {
     private User user;
 
 }
+

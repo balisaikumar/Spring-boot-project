@@ -19,3 +19,4 @@ public interface AdminMapper {
     AdminProfileDto toDto(AdminProfile admin);
 
 }
+

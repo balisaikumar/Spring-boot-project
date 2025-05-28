@@ -7,15 +7,12 @@ import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/Patient")
 @RequiredArgsConstructor
 public class PatientController {
 
@@ -34,7 +31,7 @@ public class PatientController {
         }
     }
 
-    @PostMapping("/login")
+    @GetMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
             UserDto user = userService.patientLogin(request);
@@ -46,3 +43,4 @@ public class PatientController {
     }
 
 }
+

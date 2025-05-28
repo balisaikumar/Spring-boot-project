@@ -12,3 +12,4 @@ public interface AdminService {
     AdminProfileDto loginAdmin(LoginRequest request);
 
 }
+

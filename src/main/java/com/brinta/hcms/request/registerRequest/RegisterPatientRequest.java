@@ -27,3 +27,4 @@ public class RegisterPatientRequest {
     private String address;
 
 }
+

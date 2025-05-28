@@ -30,3 +30,4 @@ public class RegisterDoctorRequest {
     private String qualification;
 
 }
+

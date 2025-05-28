@@ -18,3 +18,4 @@ public interface DoctorRepository extends JpaRepository<DoctorProfile, Long> {
     Optional<DoctorProfile> findByEmail(String email);
 
 }
+

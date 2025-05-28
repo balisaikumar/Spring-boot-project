@@ -2,10 +2,8 @@ package com.brinta.hcms.controller;
 
 import com.brinta.hcms.dto.DoctorProfileDto;
 import com.brinta.hcms.entity.DoctorProfile;
-import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
-import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import com.brinta.hcms.service.DoctorService;
 import com.brinta.hcms.service.UserService;
@@ -128,3 +126,4 @@ public class DoctorController {
     }
 
 }
+

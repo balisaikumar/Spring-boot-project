@@ -8,6 +8,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface PatientMapper {
 
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "user.role", constant = "PATIENT")
     @Mapping(target = "user.password", ignore = true)
     @Mapping(target = "user.username", source = "userName")
@@ -15,3 +16,4 @@ public interface PatientMapper {
     PatientProfile toEntity(RegisterPatientRequest request);
 
 }
+
