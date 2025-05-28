@@ -32,14 +32,14 @@ jobs:
 
       - name: Transfer WAR file to Lightsail
         run: |
-          scp -i lightsail_key.pem -o StrictHostKeyChecking=no target/*.war ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }}:/home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.war
+          scp -i lightsail_key.pem -o StrictHostKeyChecking=no target/*.jar ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }}:/home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.jar
 
       - name: Deploy WAR on Lightsail
         run: |
           ssh -i lightsail_key.pem -o StrictHostKeyChecking=no ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
-            sudo mv /home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.war /home/ec2-user/apache-tomcat-9.0.105/lib
+            sudo mv /home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.jar /home/ec2-user/apache-tomcat-9.0.105/lib
             cd /home/ec2-user/apache-tomcat-9.0.105/bin
             sudo ./startup.sh
           EOF
       # - name: run a jar file
-      #   run: sudo java -war /home/runner/work/hcms-java/hcms-java/target/HCMS-0.0.1-SNAPSHOT.war
+      #   run: sudo java -jar /home/runner/work/hcms-java/hcms-java/target/HCMS-0.0.1-SNAPSHOT.jar
