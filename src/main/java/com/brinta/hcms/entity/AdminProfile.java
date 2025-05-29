@@ -2,18 +2,15 @@ package com.brinta.hcms.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
-@Getter
-@Setter
-@AllArgsConstructor
+@Data
 @NoArgsConstructor
-@Table(name = "Doctor")
-public class DoctorProfile {
+@AllArgsConstructor
+@Table(name = "admin")
+public class AdminProfile {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,18 +19,13 @@ public class DoctorProfile {
     private String name;
 
     @Column(nullable = false)
-    private String email;
-
-    @Column(nullable = false)
-    private String specialization;
-
-    @Column(nullable = false)
     private String contactNumber;
 
     @Column(nullable = false)
-    private String qualification;
+    private String email;
 
     @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id")
     @JsonBackReference
     private User user;
 

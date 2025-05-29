@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,7 +38,8 @@ public class DoctorServiceImpl implements DoctorService {
     @Autowired
     private UserRepo userRepo;
 
-    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
 
     @Override
     public DoctorProfile register(RegisterDoctorRequest registerDoctor) {
@@ -54,19 +55,17 @@ public class DoctorServiceImpl implements DoctorService {
             throw new DuplicateEntryException(errorMessage.toString());
         }
 
-        String passwordEncode = passwordEncoder.encode(registerDoctor.getPassword());
-
         User saveUser = new User();
         saveUser.setUsername(registerDoctor.getUserName());
         saveUser.setEmail(registerDoctor.getEmail());
-        saveUser.setPassword(passwordEncode);
+        saveUser.setPassword(passwordEncoder.encode(registerDoctor.getPassword()));
         saveUser.setRole(Roles.DOCTOR);
 
         DoctorProfile doctor = doctorMapper.register(registerDoctor);
         doctor.setUser(saveUser);
         saveUser.setDoctorProfile(doctor);
 
-        userRepo.save(saveUser); // saves both user and doctor due to CascadeType.ALL
+        userRepo.save(saveUser);
 
         return doctor;
     }
@@ -136,3 +135,4 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
 }
+

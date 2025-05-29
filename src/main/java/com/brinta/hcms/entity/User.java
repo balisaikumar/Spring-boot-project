@@ -27,6 +27,7 @@ public class User {
     private String email;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private Roles role;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
@@ -36,4 +37,8 @@ public class User {
     @JsonManagedReference
     private DoctorProfile doctorProfile;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private AdminProfile adminProfile;
+
 }
+

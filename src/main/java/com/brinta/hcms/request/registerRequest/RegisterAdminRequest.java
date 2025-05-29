@@ -1,12 +1,14 @@
 package com.brinta.hcms.request.registerRequest;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterDoctorRequest {
+public class RegisterAdminRequest {
 
     @NotBlank(message = "Username is required")
     private String userName;
@@ -14,20 +16,14 @@ public class RegisterDoctorRequest {
     @NotBlank(message = "Name is required")
     private String name;
 
-    @NotBlank(message = "Email is required")
-    private String email;
-
     @NotBlank(message = "Password is required")
     private String password;
 
-    @NotBlank(message = "specialization is required")
-    private String specialization;
+    @NotBlank(message = "Email is required")
+    private String email;
 
-    @NotBlank(message = "Phone is required")
+    @NotBlank(message = "Contact number is required")
     private String contactNumber;
-
-    @NotBlank(message = "Qualification is required")
-    private String qualification;
 
 }
 

@@ -21,3 +21,4 @@ public interface DoctorService {
     void delete(Long doctorId);
 
 }
+

@@ -2,11 +2,11 @@ package com.brinta.hcms.controller;
 
 import com.brinta.hcms.dto.DoctorProfileDto;
 import com.brinta.hcms.entity.DoctorProfile;
-import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
-import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
+import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import com.brinta.hcms.service.DoctorService;
+import com.brinta.hcms.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/doctor/api")
+@RequestMapping("/doctor")
 @Tag(name = "Doctor Profile API", description = "Operations Related to Doctor")
 @AllArgsConstructor
 public class DoctorController {
@@ -31,20 +31,17 @@ public class DoctorController {
     @Autowired
     private DoctorService doctorService;
 
-    @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Register Doctor", responses = {
-            @ApiResponse(description = "Added Doctor in the database",
-                    responseCode = "201",
-                    content = @Content(schema = @Schema(implementation = DoctorProfile.class))),
-            @ApiResponse(description = "Email already exists", responseCode = "400")})
-    public ResponseEntity<?> create(@Valid @RequestBody RegisterDoctorRequest registerDoctor) {
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/login")
+    public ResponseEntity<?> doctorLogin(@RequestBody LoginRequest request) {
         try {
-            DoctorProfile createdParent = doctorService.register(registerDoctor);
-            return ResponseEntity.status(201)
-                    .body(Map.of("message", "Doctor registered successfully!",
-                            "doctor", createdParent));
-        } catch (DuplicateEntryException exception) {
-            return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
+            DoctorProfileDto doctor = userService.doctorLogin(request);
+            return ResponseEntity.status(200)
+                    .body(Map.of("message", "Login successful", "Doctor", doctor));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(401).body(ex.getMessage());
         }
     }
 
@@ -129,3 +126,4 @@ public class DoctorController {
     }
 
 }
+
