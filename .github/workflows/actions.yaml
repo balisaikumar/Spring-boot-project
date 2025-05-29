@@ -25,17 +25,17 @@ jobs:
       - name: Package project
         run: mvn package
 
-       - name: Prepare SSH key
-         run: |
+      - name: Prepare SSH key
+        run: |
            echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > lightsail_key.pem
            chmod 600 lightsail_key.pem
 
-       - name: Transfer WAR file to Lightsail
-         run: |
+      - name: Transfer WAR file to Lightsail
+        run: |
            scp -i lightsail_key.pem -o StrictHostKeyChecking=no target/*.jar ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }}:/home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.war
 
-       - name: Deploy WAR on Lightsail
-         run: |
+      - name: Deploy WAR on Lightsail
+        run: |
            ssh -i lightsail_key.pem -o StrictHostKeyChecking=no ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
              sudo mv /home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.war /home/ec2-user/apache-tomcat-9.0.105/webapps
              cd /home/ec2-user/apache-tomcat-9.0.105/bin
