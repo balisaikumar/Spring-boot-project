@@ -32,12 +32,12 @@ jobs:
 
       - name: Transfer WAR file to Lightsail
         run: |
-          scp -i lightsail_key.pem -o StrictHostKeyChecking=no target/*.jar ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }}:/home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.jar
+          scp -i lightsail_key.pem -o StrictHostKeyChecking=no target/*.jar ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }}:/home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.war
 
       - name: Deploy WAR on Lightsail
         run: |
           ssh -i lightsail_key.pem -o StrictHostKeyChecking=no ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }} << 'EOF'
-            sudo mv /home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.jar /home/ec2-user/apache-tomcat-9.0.105/lib
+            sudo mv /home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.war /home/ec2-user/apache-tomcat-9.0.105/webapps
             cd /home/ec2-user/apache-tomcat-9.0.105/bin
             sudo ./startup.sh
           EOF
