@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: Health Care Management System
+
+  datasource:
+    url: jdbc:mysql://15.207.207.149:3306/hcms
+    username: dev
+    password: Root@123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    open-in-view: false
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+  jackson:
+    time-zone: Asia/Kolkata
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
+springdoc:
+  swagger-ui:
+    disable-swagger-default-url: true
+    docExpansion: none
+    enabled: true
+    operationSorter: alpha
+    tagsSorter: alpha
+    displayRequestDuration: false
+  api-docs:
+    enabled: true
