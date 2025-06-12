@@ -7,7 +7,7 @@ import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.mapper.AdminMapper;
 import com.brinta.hcms.repository.AdminRepository;
-import com.brinta.hcms.repository.UserRepo;
+import com.brinta.hcms.repository.UserRepository;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterAdminRequest;
 import com.brinta.hcms.service.AdminService;
@@ -24,7 +24,7 @@ public class AdminServiceImpl implements AdminService {
     private AdminRepository adminRepo;
 
     @Autowired
-    private UserRepo userRepo;
+    private UserRepository userRepository;
 
     @Autowired
     private AdminMapper adminMapper;
@@ -62,7 +62,7 @@ public class AdminServiceImpl implements AdminService {
         AdminProfile savedAdmin = adminRepo.save(admin);
 
         // Save User with a link to Admin
-        userRepo.save(user);
+        userRepository.save(user);
 
         return savedAdmin;
     }

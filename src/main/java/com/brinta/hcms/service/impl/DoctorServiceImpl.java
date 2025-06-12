@@ -9,7 +9,7 @@ import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.mapper.DoctorMapper;
 import com.brinta.hcms.repository.DoctorRepository;
-import com.brinta.hcms.repository.UserRepo;
+import com.brinta.hcms.repository.UserRepository;
 import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import com.brinta.hcms.service.DoctorService;
@@ -36,7 +36,7 @@ public class DoctorServiceImpl implements DoctorService {
     private DoctorRepository doctorRepository;
 
     @Autowired
-    private UserRepo userRepo;
+    private UserRepository userRepository;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -65,7 +65,7 @@ public class DoctorServiceImpl implements DoctorService {
         doctor.setUser(saveUser);
         saveUser.setDoctorProfile(doctor);
 
-        userRepo.save(saveUser);
+        userRepository.save(saveUser);
 
         return doctor;
     }

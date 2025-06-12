@@ -10,7 +10,7 @@ import com.brinta.hcms.mapper.DoctorMapper;
 import com.brinta.hcms.mapper.PatientMapper;
 import com.brinta.hcms.mapper.UserMapper;
 import com.brinta.hcms.repository.DoctorRepository;
-import com.brinta.hcms.repository.UserRepo;
+import com.brinta.hcms.repository.UserRepository;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.service.UserService;
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 public class UserServiceImpl implements UserService {
 
     @Autowired
-    private UserRepo userRepo;
+    private UserRepository userRepository;
 
     @Autowired
     private PatientMapper patientMapper;
@@ -43,7 +43,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto registerPatient(RegisterPatientRequest request) {
-        if (userRepo.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException("Email already registered");
         }
 
@@ -51,13 +51,13 @@ public class UserServiceImpl implements UserService {
         profile.getUser().setPassword(passwordEncoder.encode(request.getPassword()));
         profile.getUser().setPatientProfile(profile);
 
-        User savedUser = userRepo.save(profile.getUser());
+        User savedUser = userRepository.save(profile.getUser());
         return userMapper.toDto(savedUser);
     }
 
     @Override
     public UserDto patientLogin(LoginRequest request) {
-        return userRepo.findByEmail(request.getEmail())
+        return userRepository.findByEmail(request.getEmail())
                 .filter(user -> passwordEncoder.matches(request.getPassword(), user.getPassword()))
                 .map(userMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));

@@ -8,7 +8,11 @@ public enum Roles {
 
     DOCTOR,
 
-    PATIENT
+    PATIENT,
+
+    ROLE_USER,
+
+    ROLE_ADMIN
 
 }
 
