@@ -1,7 +1,6 @@
 package com.brinta.hcms.enums;
 
 public enum Roles {
-
     SUPER_ADMIN,
 
     ADMIN,
@@ -10,9 +9,4 @@ public enum Roles {
 
     PATIENT,
 
-    ROLE_USER,
-
-    ROLE_ADMIN
-
 }
-

@@ -14,6 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Table(name = "Doctor")
 public class DoctorProfile {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -38,4 +39,3 @@ public class DoctorProfile {
     private User user;
 
 }
-

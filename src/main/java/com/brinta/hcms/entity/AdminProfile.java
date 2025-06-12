@@ -30,4 +30,3 @@ public class AdminProfile {
     private User user;
 
 }
-

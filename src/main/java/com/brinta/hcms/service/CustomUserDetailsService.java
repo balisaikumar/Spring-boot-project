@@ -2,35 +2,29 @@ package com.brinta.hcms.service;
 
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.GrantedAuthority;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    @Autowired
-    private  UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User  user = userRepository.findByUsername(username)
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
         return new org.springframework.security.core.userdetails.User(
-                user.getUsername(),
+                user.getEmail(),
                 user.getPassword(),
-                getAuthority(user)
+                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
-    }
-    public Collection<? extends GrantedAuthority> getAuthority(User user) {
-        GrantedAuthority authority = new SimpleGrantedAuthority(user.getRole().name());
-        return List.of(authority);
     }
 
 }
-

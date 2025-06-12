@@ -17,6 +17,7 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String fullName;
 
     @Column(nullable = false)
@@ -43,4 +44,3 @@ public class User {
     private AdminProfile adminProfile;
 
 }
-

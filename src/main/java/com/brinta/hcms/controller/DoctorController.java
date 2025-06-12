@@ -17,6 +17,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,18 +35,18 @@ public class DoctorController {
     @Autowired
     private UserService userService;
 
-    @GetMapping("/login")
+    @PostMapping("/login")
     public ResponseEntity<?> doctorLogin(@RequestBody LoginRequest request) {
         try {
-            DoctorProfileDto doctor = userService.doctorLogin(request);
-            return ResponseEntity.status(200)
-                    .body(Map.of("message", "Login successful", "Doctor", doctor));
+            Map<String, Object> response = userService.doctorLogin(request);
+            return ResponseEntity.ok(response);
         } catch (RuntimeException ex) {
-            return ResponseEntity.status(401).body(ex.getMessage());
+            return ResponseEntity.status(401).body(Map.of("error", ex.getMessage()));
         }
     }
 
     @PutMapping(value = "/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Update Doctor",
             responses = {
                     @ApiResponse(description = "Parent details updated successfully",
@@ -55,7 +56,7 @@ public class DoctorController {
                     @ApiResponse(description = "Invalid input data",
                             responseCode = "400")
             })
-    public ResponseEntity<?> updateParent(@PathVariable Long id,
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id,
                                           @Valid @RequestBody UpdateDoctorRequest updateDoctorRequest) {
         try {
             DoctorProfile updatedDoctor = doctorService.update(id, updateDoctorRequest);
@@ -68,6 +69,7 @@ public class DoctorController {
     }
 
     @GetMapping(value = "/findBy", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Get Doctor By Parameters",
             responses = {
                     @ApiResponse(responseCode = "200",
@@ -90,6 +92,7 @@ public class DoctorController {
     }
 
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Get All Doctors With Pagination",
             responses = {
                     @ApiResponse(description = "List of parents",
@@ -97,7 +100,7 @@ public class DoctorController {
                             content = @Content(schema = @Schema(implementation = DoctorProfileDto.class))),
                     @ApiResponse(description = "No parents found", responseCode = "404")
             })
-    public ResponseEntity<?> getParentRecords(@RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<?> getDoctorRecords(@RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "10") int size) {
         var parents = doctorService.getWithPagination(page, size);
         return parents.isEmpty()
@@ -109,13 +112,14 @@ public class DoctorController {
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Delete Doctor",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Doctor Deleted Successfully"),
                     @ApiResponse(responseCode = "400", description = "Enter input field"),
                     @ApiResponse(responseCode = "404", description = "Enter the correct ID")
             })
-    public ResponseEntity<?> deleteParentById(@PathVariable("id") Long doctorId) {
+    public ResponseEntity<?> deleteDoctorById(@PathVariable("id") Long doctorId) {
         try {
             doctorService.delete(doctorId);
             return ResponseEntity.ok(Map.of("message",
@@ -126,4 +130,3 @@ public class DoctorController {
     }
 
 }
-

@@ -1,12 +1,12 @@
 package com.brinta.hcms.service;
 
 
-import com.brinta.hcms.dto.LoginRequest;
 import com.brinta.hcms.dto.RefreshTokenRequest;
 import com.brinta.hcms.dto.RegisterRequest;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.repository.UserRepository;
+import com.brinta.hcms.request.registerRequest.LoginRequest;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -31,7 +31,7 @@ public class AuthService {
 
     @Transactional
     public void registerUser(RegisterRequest registerRequest) {
-        // Check if user with the same username already exist
+        // Check if user with the same username already exists
         if(userRepository.existsByUsername(registerRequest.getUsername())) {
             throw new IllegalArgumentException("Username is already in use");
         }
@@ -53,7 +53,7 @@ public class AuthService {
         // Authenticate the user
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        loginRequest.getUsername(),
+                        loginRequest.getEmail(),
                         loginRequest.getPassword()
                 )
         );
@@ -68,7 +68,7 @@ public class AuthService {
     public TokenPair refreshToken(@Valid RefreshTokenRequest request) {
 
         String refreshToken = request.getRefreshToken();
-        // check if it is valid refresh token
+        // check if it is a valid refresh token
         if(!jwtService.isRefreshToken(refreshToken)) {
             throw new IllegalArgumentException("Invalid refresh token");
         }
@@ -90,5 +90,5 @@ public class AuthService {
         String accessToken = jwtService.generateAccessToken(authentication);
         return new TokenPair(accessToken, refreshToken);
     }
-}
 
+}

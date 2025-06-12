@@ -1,8 +1,11 @@
 package com.brinta.hcms.controller;
 
+import com.brinta.hcms.dto.AdminProfileDto;
+import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.AdminProfile;
 import com.brinta.hcms.entity.DoctorProfile;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
+import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterAdminRequest;
 import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
@@ -13,8 +16,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -53,13 +58,32 @@ public class AdminController {
         }
     }
 
+    @PostMapping(value = "/login", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Admin Login", responses = {
+            @ApiResponse(description = "Admin logged in successfully", responseCode = "200"),
+            @ApiResponse(description = "Invalid credentials", responseCode = "401")
+    })
+    public ResponseEntity<?> loginAdmin(@Valid @RequestBody LoginRequest loginRequest) {
+        try {
+            TokenPair tokenPair = adminService.loginAdmin(loginRequest);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Login successful",
+                    "accessToken", tokenPair.getAccessToken(),
+                    "refreshToken", tokenPair.getRefreshToken()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping(value = "/doctor/register", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Register Doctor", responses = {
             @ApiResponse(description = "Added Doctor in the database",
                     responseCode = "201",
                     content = @Content(schema = @Schema(implementation = DoctorProfile.class))),
             @ApiResponse(description = "Email already exists", responseCode = "400")})
-    public ResponseEntity<?> create(@Valid @RequestBody RegisterDoctorRequest registerDoctor) {
+    public ResponseEntity<?> registerDoctor(@Valid @RequestBody RegisterDoctorRequest registerDoctor) {
         try {
             DoctorProfile createdParent = doctorService.register(registerDoctor);
             return ResponseEntity.status(201)
@@ -70,22 +94,45 @@ public class AdminController {
         }
     }
 
-    @GetMapping(value = "/login", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Admin Login", responses = {
-            @ApiResponse(description = "Admin logged in successfully", responseCode = "200"),
-            @ApiResponse(description = "Invalid credentials", responseCode = "401")
-    })
-    public ResponseEntity<?> loginAdmin(@Valid @RequestBody LoginRequest loginRequest) {
+    @GetMapping(value = "/users", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get All Admins With Pagination",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "List of admins",
+                            content = @Content(schema = @Schema(implementation = AdminProfileDto.class))),
+                    @ApiResponse(responseCode = "204", description = "No admins found")
+            })
+    public ResponseEntity<?> getAdminRecords(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) int size) {
+
+        Page<AdminProfileDto> admins = adminService.getWithPagination(page, size);
+
+        return admins.isEmpty()
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(Map.of(
+                "admins", admins.getContent(),
+                "currentPage", admins.getNumber(),
+                "totalPages", admins.getTotalPages(),
+                "totalElements", admins.getTotalElements()
+        ));
+    }
+
+    @DeleteMapping(value = "/user/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete Admin",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Admin Deleted Successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request"),
+                    @ApiResponse(responseCode = "404", description = "Admin Not Found")
+            })
+    public ResponseEntity<?> deleteAdminById(@PathVariable("id") Long adminId) {
         try {
-            var adminDto = adminService.loginAdmin(loginRequest);
-            return ResponseEntity.ok(Map.of(
-                    "message", "Login successful",
-                    "admin", adminDto
-            ));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+            adminService.delete(adminId);
+            return ResponseEntity.ok(Map.of("message", "Admin deleted successfully"));
+        } catch (ResourceNotFoundException ex) {
+            return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
         }
     }
 
 }
-

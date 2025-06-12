@@ -1,6 +1,5 @@
 package com.brinta.hcms.service;
 
-
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.exception.JwtExpiredException;
 import com.brinta.hcms.exception.JwtInvalidException;
@@ -20,6 +19,7 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -34,31 +34,37 @@ public class JwtService {
     @Value("${app.jwt.refresh-expiration}")
     private long refreshExpirationMs;
 
-
     public TokenPair generateTokenPair(Authentication authentication) {
         String accessToken = generateAccessToken(authentication);
         String refreshToken = generateRefreshToken(authentication);
-
         return new TokenPair(accessToken, refreshToken);
     }
 
-    // Generate access token
+    // Generate access token with roles
     public String generateAccessToken(Authentication authentication) {
         return generateToken(authentication, jwtExpirationMs, new HashMap<>());
     }
 
-    // Generate refresh token
+    // Generate refresh token with tokenType claim
     public String generateRefreshToken(Authentication authentication) {
-        Map<String, String> claims = new HashMap<>();
-        claims.put("tokenType", "refresh");
-        return generateToken(authentication, refreshExpirationMs, claims);
+        Map<String, String> extraClaims = new HashMap<>();
+        extraClaims.put("tokenType", "refresh");
+        return generateToken(authentication, refreshExpirationMs, extraClaims);
     }
 
-    private String generateToken(Authentication authentication, long expirationInMs, Map<String, String> claims) {
+    private String generateToken(Authentication authentication, long expirationInMs, Map<String, String> extraClaims) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
 
-        Date now = new Date(); // Time of token creation
-        Date expiryDate = new Date(now.getTime() + expirationInMs); // Time of token expiration
+        Map<String, Object> claims = new HashMap<>(extraClaims);
+
+        // Add roles to the token
+        claims.put("roles", authentication.getAuthorities().stream()
+                .map(auth -> auth.getAuthority()
+                        .replace("ROLE_", "")) // Remove prefix
+                .collect(Collectors.toList()));
+
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expirationInMs);
 
         return Jwts.builder()
                 .header()
@@ -72,11 +78,9 @@ public class JwtService {
                 .compact();
     }
 
-    // Validate token
     public boolean validateTokenForUser(String token, UserDetails userDetails) {
         final String username = extractUsernameFromToken(token);
-        return username != null
-                && username.equals(userDetails.getUsername());
+        return username != null && username.equals(userDetails.getUsername());
     }
 
     public boolean isValidToken(String token) {
@@ -84,52 +88,39 @@ public class JwtService {
             extractAllClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
-            throw new JwtExpiredException("Token has expired", e); // Custom exception
+            throw new JwtExpiredException("Token has expired", e);
         } catch (JwtException e) {
-            throw new JwtInvalidException("Token is invalid", e); // Custom exception
+            throw new JwtInvalidException("Token is invalid", e);
         }
     }
 
     public String extractUsernameFromToken(String token) {
         Claims claims = extractAllClaims(token);
-
-        if(claims != null) {
-            return claims.getSubject();
-        }
-        return null;
-
+        return claims != null ? claims.getSubject() : null;
     }
 
-    // Validate if the token is refresh token
     public boolean isRefreshToken(String token) {
         Claims claims = extractAllClaims(token);
-        if(claims == null) {
-            return false;
-        }
-        return "refresh".equals(claims.get("tokenType"));
+        return claims != null && "refresh".equals(claims.get("tokenType"));
     }
 
-    private Claims extractAllClaims(String token) {
-        Claims claims = null;
-
+    public Claims extractAllClaims(String token) {
         try {
-            claims = Jwts.parser()
+            return Jwts.parser()
                     .verifyWith(getSignInKey())
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        }  catch (ExpiredJwtException ex) {
-            // ✅ Expired token
+        } catch (ExpiredJwtException ex) {
             throw new JwtExpiredException("Token expired", ex);
         } catch (JwtException | IllegalArgumentException ex) {
-            // ✅ Malformed or tampered token
             throw new JwtInvalidException("Token invalid", ex);
         }
-        return claims;
     }
 
     private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
+
 }

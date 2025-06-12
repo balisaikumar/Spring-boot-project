@@ -7,4 +7,3 @@ public class DuplicateEntryException extends RuntimeException {
     }
 
 }
-

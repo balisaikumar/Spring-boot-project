@@ -26,4 +26,3 @@ public class RegisterAdminRequest {
     private String contactNumber;
 
 }
-

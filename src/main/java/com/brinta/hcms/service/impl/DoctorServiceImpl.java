@@ -113,13 +113,13 @@ public class DoctorServiceImpl implements DoctorService {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<DoctorProfile> parentPage = doctorRepository.findAll(pageable);
+        Page<DoctorProfile> doctorPage = doctorRepository.findAll(pageable);
 
-        if (parentPage.isEmpty()) {
+        if (doctorPage.isEmpty()) {
             return Page.empty();
         }
 
-        return parentPage.map(doctorMapper::toDto);
+        return doctorPage.map(doctorMapper::toDto);
 
     }
 
@@ -135,4 +135,3 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
 }
-

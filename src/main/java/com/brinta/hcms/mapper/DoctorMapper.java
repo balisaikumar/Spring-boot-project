@@ -27,4 +27,3 @@ public interface DoctorMapper {
     DoctorProfileDto toDto (DoctorProfile doctor);
 
 }
-

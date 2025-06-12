@@ -16,4 +16,3 @@ public class AdminProfileDto {
     private String contactNumber;
 
 }
-
