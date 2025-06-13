@@ -3,8 +3,8 @@ package com.brinta.hcms.service.impl;
 import com.brinta.hcms.dto.DoctorProfileDto;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.dto.UserDto;
-import com.brinta.hcms.entity.DoctorProfile;
-import com.brinta.hcms.entity.PatientProfile;
+import com.brinta.hcms.entity.Doctor;
+import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
@@ -64,9 +64,9 @@ public class UserServiceImpl implements UserService {
             throw new EmailAlreadyExistsException("Email already registered");
         }
 
-        PatientProfile profile = patientMapper.toEntity(request);
+        Patient profile = patientMapper.toEntity(request);
         profile.getUser().setPassword(passwordEncoder.encode(request.getPassword()));
-        profile.getUser().setPatientProfile(profile);
+        profile.getUser().setPatient(profile);
 
         User savedUser = userRepository.save(profile.getUser());
         return userMapper.toDto(savedUser);
@@ -139,7 +139,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Fetch the doctor by email
-        DoctorProfile doctor = doctorRepository.findByEmail(request.getEmail())
+        Doctor doctor = doctorRepository.findByEmail(request.getEmail())
                 .orElseThrow(() ->
                         new RuntimeException("Doctor not found with email: "
                                 + request.getEmail()));

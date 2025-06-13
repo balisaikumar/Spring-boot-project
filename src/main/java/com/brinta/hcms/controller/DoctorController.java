@@ -1,7 +1,7 @@
 package com.brinta.hcms.controller;
 
 import com.brinta.hcms.dto.DoctorProfileDto;
-import com.brinta.hcms.entity.DoctorProfile;
+import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
@@ -51,7 +51,7 @@ public class DoctorController {
             responses = {
                     @ApiResponse(description = "Parent details updated successfully",
                             responseCode = "200",
-                            content = @Content(schema = @Schema(implementation = DoctorProfile.class))),
+                            content = @Content(schema = @Schema(implementation = Doctor.class))),
                     @ApiResponse(description = "Parent not found", responseCode = "404"),
                     @ApiResponse(description = "Invalid input data",
                             responseCode = "400")
@@ -59,7 +59,7 @@ public class DoctorController {
     public ResponseEntity<?> updateDoctor(@PathVariable Long id,
                                           @Valid @RequestBody UpdateDoctorRequest updateDoctorRequest) {
         try {
-            DoctorProfile updatedDoctor = doctorService.update(id, updateDoctorRequest);
+            Doctor updatedDoctor = doctorService.update(id, updateDoctorRequest);
             return ResponseEntity.ok(Map.of("message",
                     "Parent updated successfully!",
                     "parent", updatedDoctor));

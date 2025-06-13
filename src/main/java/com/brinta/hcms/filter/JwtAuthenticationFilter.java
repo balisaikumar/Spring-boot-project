@@ -1,7 +1,7 @@
 package com.brinta.hcms.filter;
 
-import com.brinta.hcms.exception.JwtExpiredException;
-import com.brinta.hcms.exception.JwtInvalidException;
+import com.brinta.hcms.exception.exceptionHandler.JwtExpiredException;
+import com.brinta.hcms.exception.exceptionHandler.JwtInvalidException;
 import com.brinta.hcms.service.JwtService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
@@ -32,10 +33,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal
-            (HttpServletRequest request,
-             HttpServletResponse response,
-             FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
@@ -54,11 +54,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         jwt = getJwtFromRequest(request);
+
         try {
-            if (!jwtService.isValidToken(jwt)) {
-                filterChain.doFilter(request, response);
-                return;
-            }
+            // Validate the token (throws JwtExpiredException or JwtInvalidException if invalid)
+            jwtService.isValidToken(jwt);
 
             username = jwtService.extractUsernameFromToken(jwt);
 
@@ -66,35 +65,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.validateTokenForUser(jwt, userDetails)) {
-
                     Claims claims = jwtService.extractAllClaims(jwt);
                     List<String> roles = claims.get("roles", List.class);
 
-                    // Add "ROLE_" prefix for Spring Security
                     List<SimpleGrantedAuthority> authorities = roles.stream()
                             .map(role -> "ROLE_" + role)
                             .map(SimpleGrantedAuthority::new)
                             .collect(Collectors.toList());
 
                     UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    authorities
-                            );
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
+                            new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    // Token doesn't match user
+                    sendErrorResponse(response, "Invalid token", HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
                 }
-                filterChain.doFilter(request, response);
             }
 
-        } catch (JwtExpiredException | JwtInvalidException e) {
-            request.setAttribute("authException", e);
-            SecurityContextHolder.clearContext();
-            request.getRequestDispatcher("/error").forward(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (JwtExpiredException ex) {
+            sendErrorResponse(response, "Token expired", HttpServletResponse.SC_UNAUTHORIZED);
+        } catch (JwtInvalidException ex) {
+            sendErrorResponse(response, "Invalid token", HttpServletResponse.SC_UNAUTHORIZED);
+        } catch (Exception ex) {
+            sendErrorResponse(response, "Something went wrong",
+                    HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private void sendErrorResponse(HttpServletResponse response,
+                                   String message, int status) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\": \"" + message + "\"}");
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {

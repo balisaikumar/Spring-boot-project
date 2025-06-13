@@ -34,13 +34,13 @@ public class User {
     private Roles role;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private PatientProfile patientProfile;
+    private Patient patient;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     @JsonManagedReference
-    private DoctorProfile doctorProfile;
+    private Doctor doctor;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private AdminProfile adminProfile;
+    private Admin admin;
 
 }

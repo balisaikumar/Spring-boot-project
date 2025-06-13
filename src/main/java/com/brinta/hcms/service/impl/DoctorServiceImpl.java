@@ -1,7 +1,7 @@
 package com.brinta.hcms.service.impl;
 
 import com.brinta.hcms.dto.DoctorProfileDto;
-import com.brinta.hcms.entity.DoctorProfile;
+import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
@@ -42,7 +42,7 @@ public class DoctorServiceImpl implements DoctorService {
     private BCryptPasswordEncoder passwordEncoder;
 
     @Override
-    public DoctorProfile register(RegisterDoctorRequest registerDoctor) {
+    public Doctor register(RegisterDoctorRequest registerDoctor) {
 
         boolean emailExists = doctorRepository.existsByEmail(registerDoctor.getEmail());
         boolean contactExists = doctorRepository.existsByContactNumber(registerDoctor.getContactNumber());
@@ -61,9 +61,9 @@ public class DoctorServiceImpl implements DoctorService {
         saveUser.setPassword(passwordEncoder.encode(registerDoctor.getPassword()));
         saveUser.setRole(Roles.DOCTOR);
 
-        DoctorProfile doctor = doctorMapper.register(registerDoctor);
+        Doctor doctor = doctorMapper.register(registerDoctor);
         doctor.setUser(saveUser);
-        saveUser.setDoctorProfile(doctor);
+        saveUser.setDoctor(doctor);
 
         userRepository.save(saveUser);
 
@@ -71,10 +71,10 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public DoctorProfile update(Long doctorId, UpdateDoctorRequest updateDoctorRequest) {
+    public Doctor update(Long doctorId, UpdateDoctorRequest updateDoctorRequest) {
 
         // Check if doctor exists
-        DoctorProfile doctor = doctorRepository.findById(doctorId)
+        Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new
                         ResourceNotFoundException("The entered ID is not valid in the Database"));
 
@@ -93,7 +93,7 @@ public class DoctorServiceImpl implements DoctorService {
             throw new ResourceNotFoundException("Enter Correct Input");
         }
 
-        Optional<DoctorProfile> doctor = doctorRepository.findByIdOrContactNumberOrEmail(doctorId, contactNumber, email);
+        Optional<Doctor> doctor = doctorRepository.findByIdOrContactNumberOrEmail(doctorId, contactNumber, email);
 
         if (doctor.isEmpty()) {
             throw new ResourceNotFoundException("No Matching Doctor found in Database");
@@ -113,7 +113,7 @@ public class DoctorServiceImpl implements DoctorService {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<DoctorProfile> doctorPage = doctorRepository.findAll(pageable);
+        Page<Doctor> doctorPage = doctorRepository.findAll(pageable);
 
         if (doctorPage.isEmpty()) {
             return Page.empty();
@@ -127,7 +127,7 @@ public class DoctorServiceImpl implements DoctorService {
     public void delete(Long doctorId) {
 
         //Find Doctor
-        DoctorProfile doctor = doctorRepository.findById(doctorId)
+        Doctor doctor = doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor Not Found"));
 
         //Delete Doctor

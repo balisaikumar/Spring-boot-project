@@ -2,7 +2,7 @@ package com.brinta.hcms.service.impl;
 
 import com.brinta.hcms.dto.AdminProfileDto;
 import com.brinta.hcms.dto.TokenPair;
-import com.brinta.hcms.entity.AdminProfile;
+import com.brinta.hcms.entity.Admin;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
@@ -52,7 +52,7 @@ public class AdminServiceImpl implements AdminService {
     private SecurityUtil securityUtil;
 
     @Override
-    public AdminProfile registerAdmin(RegisterAdminRequest registerAdmin) {
+    public Admin registerAdmin(RegisterAdminRequest registerAdmin) {
 
         // Fetch the currently logged-in user
         User currentUser = securityUtil.getCurrentUser();
@@ -77,7 +77,7 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // Use AdminMapper to convert request into AdminProfile entity
-        AdminProfile admin = adminMapper.register(registerAdmin);
+        Admin admin = adminMapper.register(registerAdmin);
 
         // Create a new User entity and link it with AdminProfile
         User user = new User();
@@ -88,10 +88,10 @@ public class AdminServiceImpl implements AdminService {
 
         // Link admin and user both ways
         admin.setUser(user);
-        user.setAdminProfile(admin);
+        user.setAdmin(admin);
 
         // Save AdminProfile and User to the database
-        AdminProfile savedAdmin = adminRepo.save(admin);
+        Admin savedAdmin = adminRepo.save(admin);
         userRepository.save(user);
 
         return savedAdmin;
@@ -105,7 +105,7 @@ public class AdminServiceImpl implements AdminService {
         }
 
         // Find admin by email
-        AdminProfile admin = adminRepo.findByEmail(request.getEmail())
+        Admin admin = adminRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new
                         RuntimeException("Admin not found with email: " + request.getEmail()));
 
@@ -141,7 +141,7 @@ public class AdminServiceImpl implements AdminService {
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<AdminProfile> adminPage = adminRepo.findAll(pageable);
+        Page<Admin> adminPage = adminRepo.findAll(pageable);
 
         if (adminPage.isEmpty()) {
             return Page.empty();
@@ -154,7 +154,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void delete(Long adminId) {
 
-        AdminProfile admin = adminRepo.findById(adminId)
+        Admin admin = adminRepo.findById(adminId)
                 .orElseThrow(()-> new ResourceNotFoundException("Admin not Found"));
 
         adminRepo.delete(admin);

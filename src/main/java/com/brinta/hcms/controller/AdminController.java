@@ -2,8 +2,8 @@ package com.brinta.hcms.controller;
 
 import com.brinta.hcms.dto.AdminProfileDto;
 import com.brinta.hcms.dto.TokenPair;
-import com.brinta.hcms.entity.AdminProfile;
-import com.brinta.hcms.entity.DoctorProfile;
+import com.brinta.hcms.entity.Admin;
+import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
@@ -43,15 +43,15 @@ public class AdminController {
     @Operation(summary = "Register Admin", responses = {
             @ApiResponse(description = "Admin registered successfully",
                     responseCode = "201",
-                    content = @Content(schema = @Schema(implementation = AdminProfile.class))),
+                    content = @Content(schema = @Schema(implementation = Admin.class))),
             @ApiResponse(description = "Email or contact already exists", responseCode = "400")
     })
     public ResponseEntity<?> registerAdmin(@Valid @RequestBody RegisterAdminRequest registerAdminRequest) {
         try {
-            AdminProfile adminProfile = adminService.registerAdmin(registerAdminRequest);
+            Admin admin = adminService.registerAdmin(registerAdminRequest);
             return ResponseEntity.status(201).body(Map.of(
                     "message", "Admin registered successfully!",
-                    "admin", adminProfile
+                    "admin", admin
             ));
         } catch (DuplicateEntryException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -81,11 +81,11 @@ public class AdminController {
     @Operation(summary = "Register Doctor", responses = {
             @ApiResponse(description = "Added Doctor in the database",
                     responseCode = "201",
-                    content = @Content(schema = @Schema(implementation = DoctorProfile.class))),
+                    content = @Content(schema = @Schema(implementation = Doctor.class))),
             @ApiResponse(description = "Email already exists", responseCode = "400")})
     public ResponseEntity<?> registerDoctor(@Valid @RequestBody RegisterDoctorRequest registerDoctor) {
         try {
-            DoctorProfile createdParent = doctorService.register(registerDoctor);
+            Doctor createdParent = doctorService.register(registerDoctor);
             return ResponseEntity.status(201)
                     .body(Map.of("message", "Doctor registered successfully!",
                             "doctor", createdParent));
