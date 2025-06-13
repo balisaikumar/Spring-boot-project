@@ -1,6 +1,6 @@
 package com.brinta.hcms.service;
 
-import com.brinta.hcms.dto.AdminProfileDto;
+import com.brinta.hcms.dto.AdminDto;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.Admin;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
@@ -13,7 +13,7 @@ public interface AdminService {
 
     TokenPair loginAdmin(LoginRequest request);
 
-    Page<AdminProfileDto> getWithPagination(int age, int size);
+    Page<AdminDto> getWithPagination(int age, int size);
 
     void delete(Long adminId);
 

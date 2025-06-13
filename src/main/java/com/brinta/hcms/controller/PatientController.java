@@ -2,6 +2,7 @@ package com.brinta.hcms.controller;
 
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.dto.UserDto;
+import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;

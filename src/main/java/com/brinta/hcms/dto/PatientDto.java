@@ -5,14 +5,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class AdminProfileDto {
+@NoArgsConstructor
+public class PatientDto {
 
-    private String email;
+    private Long id;
 
     private String name;
 
     private String contactNumber;
+
+    private String address;
+
+    private UserDto user;
 
 }

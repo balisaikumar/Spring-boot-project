@@ -1,6 +1,6 @@
 package com.brinta.hcms.mapper;
 
-import com.brinta.hcms.dto.AdminProfileDto;
+import com.brinta.hcms.dto.AdminDto;
 import com.brinta.hcms.entity.Admin;
 import com.brinta.hcms.request.registerRequest.RegisterAdminRequest;
 import org.mapstruct.Mapper;
@@ -16,6 +16,6 @@ public interface AdminMapper {
     @Mapping(target = "user.password", ignore = true)
     Admin register(RegisterAdminRequest registerAdminRequest);
 
-    AdminProfileDto toDto(Admin admin);
+    AdminDto toDto(Admin admin);
 
 }

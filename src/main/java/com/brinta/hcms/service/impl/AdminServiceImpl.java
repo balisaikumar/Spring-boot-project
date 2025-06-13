@@ -1,6 +1,6 @@
 package com.brinta.hcms.service.impl;
 
-import com.brinta.hcms.dto.AdminProfileDto;
+import com.brinta.hcms.dto.AdminDto;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.Admin;
 import com.brinta.hcms.entity.User;
@@ -132,7 +132,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public Page<AdminProfileDto> getWithPagination(int page, int size) {
+    public Page<AdminDto> getWithPagination(int page, int size) {
 
         if (page < 0 || size <= 0) {
             throw new

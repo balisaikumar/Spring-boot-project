@@ -1,6 +1,6 @@
 package com.brinta.hcms.mapper;
 
-import com.brinta.hcms.dto.DoctorProfileDto;
+import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
@@ -22,8 +22,8 @@ public interface DoctorMapper {
 
     void update(UpdateDoctorRequest updateDoctorRequest, @MappingTarget Doctor doctor);
 
-    DoctorProfileDto findBy (Doctor doctor);
+    DoctorDto findBy (Doctor doctor);
 
-    DoctorProfileDto toDto (Doctor doctor);
+    DoctorDto toDto (Doctor doctor);
 
 }

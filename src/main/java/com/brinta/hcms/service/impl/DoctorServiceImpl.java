@@ -1,6 +1,6 @@
 package com.brinta.hcms.service.impl;
 
-import com.brinta.hcms.dto.DoctorProfileDto;
+import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.enums.Roles;
@@ -85,7 +85,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public List<DoctorProfileDto> findBy(Long doctorId, String contactNumber, String email) {
+    public List<DoctorDto> findBy(Long doctorId, String contactNumber, String email) {
 
         //Check Null Input Values
         if (doctorId == null && (contactNumber == null || contactNumber.isEmpty())
@@ -104,7 +104,7 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
-    public Page<DoctorProfileDto> getWithPagination(int page, int size) {
+    public Page<DoctorDto> getWithPagination(int page, int size) {
 
         if (page < 0 || size <= 0) {
             throw new

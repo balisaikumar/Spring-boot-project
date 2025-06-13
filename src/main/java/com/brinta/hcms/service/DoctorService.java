@@ -1,6 +1,6 @@
 package com.brinta.hcms.service;
 
-import com.brinta.hcms.dto.DoctorProfileDto;
+import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
@@ -14,9 +14,9 @@ public interface DoctorService {
 
     Doctor update(Long doctorId, UpdateDoctorRequest updateDoctorRequest);
 
-    List<DoctorProfileDto> findBy(Long doctorId, String contactNumber, String email);
+    List<DoctorDto> findBy(Long doctorId, String contactNumber, String email);
 
-    Page<DoctorProfileDto> getWithPagination(int page, int size);
+    Page<DoctorDto> getWithPagination(int page, int size);
 
     void delete(Long doctorId);
 

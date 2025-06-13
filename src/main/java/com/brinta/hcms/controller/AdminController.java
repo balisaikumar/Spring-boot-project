@@ -1,6 +1,6 @@
 package com.brinta.hcms.controller;
 
-import com.brinta.hcms.dto.AdminProfileDto;
+import com.brinta.hcms.dto.AdminDto;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.Admin;
 import com.brinta.hcms.entity.Doctor;
@@ -99,14 +99,14 @@ public class AdminController {
     @Operation(summary = "Get All Admins With Pagination",
             responses = {
                     @ApiResponse(responseCode = "200", description = "List of admins",
-                            content = @Content(schema = @Schema(implementation = AdminProfileDto.class))),
+                            content = @Content(schema = @Schema(implementation = AdminDto.class))),
                     @ApiResponse(responseCode = "204", description = "No admins found")
             })
     public ResponseEntity<?> getAdminRecords(
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) int size) {
 
-        Page<AdminProfileDto> admins = adminService.getWithPagination(page, size);
+        Page<AdminDto> admins = adminService.getWithPagination(page, size);
 
         return admins.isEmpty()
                 ? ResponseEntity.noContent().build()

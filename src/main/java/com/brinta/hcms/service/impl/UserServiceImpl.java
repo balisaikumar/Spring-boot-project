@@ -1,6 +1,6 @@
 package com.brinta.hcms.service.impl;
 
-import com.brinta.hcms.dto.DoctorProfileDto;
+import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.dto.UserDto;
 import com.brinta.hcms.entity.Doctor;
@@ -58,44 +58,6 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private JwtService jwtService;
 
-    @Override
-    public UserDto registerPatient(RegisterPatientRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException("Email already registered");
-        }
-
-        Patient profile = patientMapper.toEntity(request);
-        profile.getUser().setPassword(passwordEncoder.encode(request.getPassword()));
-        profile.getUser().setPatient(profile);
-
-        User savedUser = userRepository.save(profile.getUser());
-        return userMapper.toDto(savedUser);
-    }
-
-    @Override
-    public TokenPair patientLogin(LoginRequest request) {
-
-        // Validate input
-        if (request.getEmail() == null || request.getPassword() == null) {
-            throw new IllegalArgumentException("Email and password must be provided");
-        }
-
-        // Find user by email
-        User userEntity = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + request.getEmail()));
-
-        // Check password
-        if (userEntity.getPassword() == null || !passwordEncoder.matches(request.getPassword(), userEntity.getPassword())) {
-            throw new RuntimeException("Invalid password");
-        }
-
-        // Ensure a role is PATIENT
-        Authentication authentication = getAuthentication1(userEntity);
-
-        // Generate and return TokenPair
-        return jwtService.generateTokenPair(authentication);
-    }
-
     private static Authentication getAuthentication1(User userEntity) {
         if (!Roles.PATIENT.name().equalsIgnoreCase(userEntity.getRole().name())) {
             throw new RuntimeException("Access denied: Not a patient account");
@@ -129,6 +91,44 @@ public class UserServiceImpl implements UserService {
                 user.getEmail(), null, authorities
         );
         return authentication;
+    }
+
+    @Override
+    public UserDto registerPatient(RegisterPatientRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new EmailAlreadyExistsException("Email already registered");
+        }
+
+        Patient profile = patientMapper.toEntity(request);
+        profile.getUser().setPassword(passwordEncoder.encode(request.getPassword()));
+        profile.getUser().setPatient(profile);
+
+        User savedUser = userRepository.save(profile.getUser());
+        return userMapper.register(savedUser);
+    }
+
+    @Override
+    public TokenPair patientLogin(LoginRequest request) {
+
+        // Validate input
+        if (request.getEmail() == null || request.getPassword() == null) {
+            throw new IllegalArgumentException("Email and password must be provided");
+        }
+
+        // Find user by email
+        User userEntity = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + request.getEmail()));
+
+        // Check password
+        if (userEntity.getPassword() == null || !passwordEncoder.matches(request.getPassword(), userEntity.getPassword())) {
+            throw new RuntimeException("Invalid password");
+        }
+
+        // Ensure a role is PATIENT
+        Authentication authentication = getAuthentication1(userEntity);
+
+        // Generate and return TokenPair
+        return jwtService.generateTokenPair(authentication);
     }
 
     @Override
@@ -168,7 +168,7 @@ public class UserServiceImpl implements UserService {
         TokenPair tokenPair = jwtService.generateTokenPair(authentication);
 
         // Convert to DTO
-        DoctorProfileDto doctorDto = doctorMapper.toDto(doctor);
+        DoctorDto doctorDto = doctorMapper.toDto(doctor);
 
         // Return doctor info along with tokens
         return Map.of(

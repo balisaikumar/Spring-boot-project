@@ -1,6 +1,6 @@
 package com.brinta.hcms.controller;
 
-import com.brinta.hcms.dto.DoctorProfileDto;
+import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
@@ -74,7 +74,7 @@ public class DoctorController {
             responses = {
                     @ApiResponse(responseCode = "200",
                             description = "Doctor found",
-                            content = @Content(schema = @Schema(implementation = DoctorProfileDto.class))),
+                            content = @Content(schema = @Schema(implementation = DoctorDto.class))),
                     @ApiResponse(responseCode = "404",
                             description = "No matching parent found"),
                     @ApiResponse(responseCode = "400",
@@ -83,7 +83,7 @@ public class DoctorController {
     public ResponseEntity<?> findByParams(@RequestParam(required = false) Long doctorId,
                                           @RequestParam(required = false) String contactNumber,
                                           @RequestParam(required = false) String email) {
-        List<DoctorProfileDto> doctor = doctorService.findBy(doctorId, contactNumber, email);
+        List<DoctorDto> doctor = doctorService.findBy(doctorId, contactNumber, email);
         if (doctor.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of("error",
                     "No doctor found with given criteria."));
@@ -97,7 +97,7 @@ public class DoctorController {
             responses = {
                     @ApiResponse(description = "List of parents",
                             responseCode = "200",
-                            content = @Content(schema = @Schema(implementation = DoctorProfileDto.class))),
+                            content = @Content(schema = @Schema(implementation = DoctorDto.class))),
                     @ApiResponse(description = "No parents found", responseCode = "404")
             })
     public ResponseEntity<?> getDoctorRecords(@RequestParam(defaultValue = "0") int page,
