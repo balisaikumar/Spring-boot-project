@@ -9,16 +9,14 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class UpdateDoctorRequest {
+public class UpdatePatientRequest {
 
     private String name;
 
     private String email;
 
-    private String specialization;
+    private String address;
 
     private String contactNumber;
-
-    private String qualification;
 
 }

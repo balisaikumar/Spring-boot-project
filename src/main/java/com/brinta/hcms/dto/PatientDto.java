@@ -9,8 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PatientDto {
 
-    private Long id;
-
     private String name;
 
     private String contactNumber;

@@ -20,10 +20,14 @@ public interface DoctorMapper {
     @Mapping(target = "user.password", ignore = true)
     Doctor register(RegisterDoctorRequest registerDoctor);
 
+    @Mapping(target = "name", source = "name")
+    @Mapping(target = "specialization", source = "specialization")
+    @Mapping(target = "contactNumber", source = "contactNumber")
+    @Mapping(target = "qualification", source = "qualification")
     void update(UpdateDoctorRequest updateDoctorRequest, @MappingTarget Doctor doctor);
 
-    DoctorDto findBy (Doctor doctor);
+    DoctorDto findBy(Doctor doctor);
 
-    DoctorDto toDto (Doctor doctor);
+    DoctorDto toDto(Doctor doctor);
 
 }

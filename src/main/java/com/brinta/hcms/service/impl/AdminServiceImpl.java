@@ -8,6 +8,7 @@ import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
+import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.AdminMapper;
 import com.brinta.hcms.repository.AdminRepository;
 import com.brinta.hcms.repository.UserRepository;
@@ -82,6 +83,7 @@ public class AdminServiceImpl implements AdminService {
         // Create a new User entity and link it with AdminProfile
         User user = new User();
         user.setUsername(registerAdmin.getUserName());
+        user.setName(registerAdmin.getName());
         user.setEmail(registerAdmin.getEmail());
         user.setPassword(passwordEncoder.encode(registerAdmin.getPassword()));
         user.setRole(Roles.ADMIN);
@@ -99,6 +101,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public TokenPair loginAdmin(LoginRequest request) {
+
         // Validate input
         if (request.getEmail() == null || request.getPassword() == null) {
             throw new IllegalArgumentException("Email and password must be provided");
@@ -154,10 +157,33 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void delete(Long adminId) {
 
-        Admin admin = adminRepo.findById(adminId)
-                .orElseThrow(()-> new ResourceNotFoundException("Admin not Found"));
+        // Get currently logged-in user
+        User currentUser = securityUtil.getCurrentUser();
 
-        adminRepo.delete(admin);
+        // If SUPER_ADMIN: allow deletion of any admin
+        if (currentUser.getRole() == Roles.SUPER_ADMIN) {
+            Admin admin = adminRepo.findById(adminId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
+            adminRepo.delete(admin);
+            return;
+        }
+
+        // If ADMIN: only allow deletion of their own profile
+        if (currentUser.getRole() == Roles.ADMIN) {
+            Admin admin = adminRepo.findByUserId(currentUser.getId())
+                    .orElseThrow(() -> new
+                            ResourceNotFoundException("Admin profile not linked to current user"));
+
+            if (!admin.getId().equals(adminId)) {
+                throw new UnAuthException("You are not authorized to delete another admin profile.");
+            }
+
+            adminRepo.delete(admin);
+            return;
+        }
+
+        // For any other role, deny access
+        throw new AccessDeniedException("You are not authorized to delete admin profiles.");
     }
 
 }

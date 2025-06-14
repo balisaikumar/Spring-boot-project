@@ -67,7 +67,6 @@ public class AdminController {
         try {
             TokenPair tokenPair = adminService.loginAdmin(loginRequest);
             return ResponseEntity.ok(Map.of(
-                    "message", "Login successful",
                     "accessToken", tokenPair.getAccessToken(),
                     "refreshToken", tokenPair.getRefreshToken()
             ));
