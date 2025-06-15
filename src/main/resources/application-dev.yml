@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:mysql://15.207.207.149:3306/hcms_dev
+    username: dev
+    password: Root@123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
+
+logging:
+  config: classpath:logback-dev.xml 
