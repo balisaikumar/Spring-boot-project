@@ -1,6 +1,6 @@
 <configuration>
 
-    <property name="LOG_PATH" value="logs" />
+    <property name="LOG_PATH" value="/opt/homebrew/var/log/hcms" />
     <property name="LOG_FILE" value="${LOG_PATH}/app.log" />
 
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
@@ -8,7 +8,7 @@
 
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/app.%d{yyyy-MM-dd}.log</fileNamePattern>
-            <maxHistory>3</maxHistory> <!-- keep logs for 7 days -->
+            <maxHistory>3</maxHistory> <!-- keep logs for 3 days -->
         </rollingPolicy>
 
         <encoder>

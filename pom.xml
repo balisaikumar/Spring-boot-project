@@ -12,13 +12,16 @@
     </parent>
 
     <groupId>com.brinta</groupId>
-    <artifactId>HCMS</artifactId>
+    <artifactId>hcms</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Health Care Management System</name>
+    <packaging>war</packaging>
+    <name>hcms</name>
     <description>Project related to health care management system</description>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
     </properties>
 
     <dependencies>
@@ -40,6 +43,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -84,8 +92,8 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                     </plugin>
-		   <plugin>
+            </plugin>
+		    <plugin>
       			  <groupId>org.apache.maven.plugins</groupId>
       			  <artifactId>maven-surefire-plugin</artifactId>
       			  <version>3.2.5</version> <!-- use the latest stable version -->
@@ -96,7 +104,18 @@
        				 </includes>
         				 <testFailureIgnore>false</testFailureIgnore>
      			  </configuration>
-                     </plugin>  
-             </plugins>
+                     </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version> <!-- version that supports Java 21 -->
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <release>${java.version}</release>
+                </configuration>
+            </plugin>
+
+        </plugins>
      </build>
 </project>
