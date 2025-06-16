@@ -6,7 +6,6 @@ import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import com.brinta.hcms.service.DoctorService;
-import com.brinta.hcms.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,13 +31,10 @@ public class DoctorController {
     @Autowired
     private DoctorService doctorService;
 
-    @Autowired
-    private UserService userService;
-
     @PostMapping("/login")
     public ResponseEntity<?> doctorLogin(@RequestBody LoginRequest request) {
         try {
-            Map<String, Object> response = userService.doctorLogin(request);
+            Map<String, Object> response = doctorService.doctorLogin(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException ex) {
             return ResponseEntity.status(401).body(Map.of("error", ex.getMessage()));

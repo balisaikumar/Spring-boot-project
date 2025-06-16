@@ -1,25 +1,23 @@
 package com.brinta.hcms.service.impl;
 
-import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.dto.TokenPair;
-import com.brinta.hcms.dto.UserDto;
-import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
-import com.brinta.hcms.mapper.DoctorMapper;
+import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
+import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.PatientMapper;
-import com.brinta.hcms.mapper.UserMapper;
-import com.brinta.hcms.repository.DoctorRepository;
+import com.brinta.hcms.repository.PatientRepository;
 import com.brinta.hcms.repository.UserRepository;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
+import com.brinta.hcms.request.updateRequest.UpdatePatientRequest;
 import com.brinta.hcms.service.JwtService;
-import com.brinta.hcms.service.UserService;
+import com.brinta.hcms.service.PatientService;
+import com.brinta.hcms.utility.SecurityUtil;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,11 +26,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 
 @Service
 @AllArgsConstructor
-public class UserServiceImpl implements UserService {
+public class PatientServiceImpl implements PatientService {
 
     @Autowired
     private UserRepository userRepository;
@@ -41,22 +38,16 @@ public class UserServiceImpl implements UserService {
     private PatientMapper patientMapper;
 
     @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private DoctorMapper doctorMapper;
-
-    @Autowired
-    private DoctorRepository doctorRepository;
+    private PatientRepository patientRepository;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
     @Autowired
-    private AuthenticationManager authenticationManager;
+    private JwtService jwtService;
 
     @Autowired
-    private JwtService jwtService;
+    private SecurityUtil securityUtil;
 
     private static Authentication getAuthentication1(User userEntity) {
         if (!Roles.PATIENT.name().equalsIgnoreCase(userEntity.getRole().name())) {
@@ -94,17 +85,33 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDto registerPatient(RegisterPatientRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new EmailAlreadyExistsException("Email already registered");
+    public Patient registerPatient(RegisterPatientRequest request) {
+
+        boolean emailExists = patientRepository.existsByEmail(request.getEmail());
+        boolean contactExists = patientRepository.existsByPatientContactNumber(request.getContactNumber());
+
+        if (emailExists || contactExists) {
+            StringBuilder errorMessage = new StringBuilder("Already Exists: ");
+            if (emailExists) errorMessage.append("Email: ").append(request.getEmail());
+            if (emailExists && contactExists) errorMessage.append(" | ");
+            if (contactExists) errorMessage.append("Contact: ").append(request.getContactNumber());
+            throw new EmailAlreadyExistsException(errorMessage.toString());
         }
 
-        Patient profile = patientMapper.toEntity(request);
-        profile.getUser().setPassword(passwordEncoder.encode(request.getPassword()));
-        profile.getUser().setPatient(profile);
+        User user = new User();
+        user.setUsername(request.getUserName());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(Roles.PATIENT);
+        user.setName(request.getName());
 
-        User savedUser = userRepository.save(profile.getUser());
-        return userMapper.register(savedUser);
+        Patient patient = patientMapper.register(request, user); // entity mapped with full user
+        patient.setUser(user); // just in case
+        user.setPatient(patient); // set bidirectional relationship
+
+        userRepository.save(user); // Cascade saves both
+
+        return patient;
     }
 
     @Override
@@ -117,10 +124,12 @@ public class UserServiceImpl implements UserService {
 
         // Find user by email
         User userEntity = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + request.getEmail()));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found with email: " + request.getEmail()));
 
         // Check password
-        if (userEntity.getPassword() == null || !passwordEncoder.matches(request.getPassword(), userEntity.getPassword())) {
+        if (userEntity.getPassword() == null ||
+                !passwordEncoder.matches(request.getPassword(), userEntity.getPassword())) {
             throw new RuntimeException("Invalid password");
         }
 
@@ -132,51 +141,37 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Map<String, Object> doctorLogin(LoginRequest request) {
-        // Validate input
-        if (request.getEmail() == null || request.getPassword() == null) {
-            throw new IllegalArgumentException("Email and password must be provided");
-        }
-
-        // Fetch the doctor by email
-        Doctor doctor = doctorRepository.findByEmail(request.getEmail())
+    public Patient update(Long patientId, UpdatePatientRequest updatePatientRequest) {
+        // Fetch the patient to update
+        Patient patient = patientRepository.findById(patientId)
                 .orElseThrow(() ->
-                        new RuntimeException("Doctor not found with email: "
-                                + request.getEmail()));
+                        new ResourceNotFoundException("The entered ID is not valid in the Database"));
 
-        // Null check on a user object
-        if (doctor.getUser() == null || doctor.getUser().getPassword() == null) {
-            throw new RuntimeException("User credentials are not set properly for doctor: "
-                    + request.getEmail());
+        // Get currently authenticated user
+        User currentUser = securityUtil.getCurrentUser();  // Inject SecurityUtil via constructor
+
+        // Check ownership
+        if (!patient.getUser().getId().equals(currentUser.getId())) {
+            throw new UnAuthException("You are not authorized to update this patient's details.");
         }
 
-        // Validate password
-        if (!passwordEncoder.matches(request.getPassword(),
-                doctor.getUser().getPassword())) {
-            throw new RuntimeException("Invalid password");
+        // Proceed with update
+        patientMapper.update(updatePatientRequest, patient);
+
+        User user = patient.getUser();
+
+        if (user != null) {
+            if (updatePatientRequest.getName() != null) {
+                user.setName(updatePatientRequest.getName());
+            }
+            if (updatePatientRequest.getEmail() != null) {
+                user.setEmail(updatePatientRequest.getEmail());
+            }
+
+            userRepository.save(user);
         }
 
-        // Authenticate using Spring Security
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        doctor.getUser().getEmail(),
-                        request.getPassword()
-                )
-        );
-
-        // Generate JWT token pair
-        TokenPair tokenPair = jwtService.generateTokenPair(authentication);
-
-        // Convert to DTO
-        DoctorDto doctorDto = doctorMapper.toDto(doctor);
-
-        // Return doctor info along with tokens
-        return Map.of(
-                "message", "Login successful",
-                "doctor", doctorDto,
-                "accessToken", tokenPair.getAccessToken(),
-                "refreshToken", tokenPair.getRefreshToken()
-        );
+        return patientRepository.save(patient);
     }
 
 }

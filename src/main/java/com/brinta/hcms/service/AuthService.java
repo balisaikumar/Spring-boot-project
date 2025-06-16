@@ -39,7 +39,7 @@ public class AuthService {
         // Create new user
         User user = User
                 .builder()
-                .fullName(registerRequest.getFullName())
+                .name(registerRequest.getName())
                 .username(registerRequest.getUsername())
                 .email(registerRequest.getEmail())
                 .password(passwordEncoder.encode(registerRequest.getPassword()))

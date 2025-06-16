@@ -34,7 +34,8 @@ public class Doctor {
     @Column(nullable = false)
     private String qualification;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id")
     @JsonBackReference
     private User user;
 
