@@ -1,7 +1,9 @@
 package com.brinta.hcms.mapper;
 
+import com.brinta.hcms.dto.DoctorAppointmentDto;
 import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.entity.Doctor;
+import com.brinta.hcms.entity.DoctorAppointment;
 import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import org.mapstruct.Mapper;
@@ -30,4 +32,8 @@ public interface DoctorMapper {
 
     DoctorDto toDto(Doctor doctor);
 
+    @Mapping(source = "patient.name", target = "patientName")
+    DoctorAppointmentDto toDto(DoctorAppointment doctorAppointment);
+
 }
+
