@@ -1,15 +1,19 @@
 package com.brinta.hcms.service.impl;
 
+import com.brinta.hcms.dto.DoctorAppointmentDto;
 import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.Doctor;
+import com.brinta.hcms.entity.DoctorAppointment;
 import com.brinta.hcms.entity.User;
+import com.brinta.hcms.enums.AppointmentStatus;
 import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.DoctorMapper;
+import com.brinta.hcms.repository.DoctorAppointmentRepository;
 import com.brinta.hcms.repository.DoctorRepository;
 import com.brinta.hcms.repository.UserRepository;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
@@ -29,6 +33,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +51,9 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private DoctorAppointmentRepository doctorAppointmentRepository;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -233,4 +241,61 @@ public class DoctorServiceImpl implements DoctorService {
         userRepository.delete(currentUser); // Then delete linked user
     }
 
+    @Override
+    public Page<DoctorAppointmentDto> listAppointments(int page, int size) {
+        if (page < 0 || size <= 0) {
+            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
+        }
+
+        Long userId = securityUtil.getCurrentUser().getId();
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found for the logged-in user"));
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<DoctorAppointment> appointmentPage = doctorAppointmentRepository.findByDoctorId(doctor.getId(), pageable);
+
+        return appointmentPage.map(doctorMapper::toDto);
+    }
+
+    @Override
+    public DoctorAppointmentDto rescheduleAppointment(Long appointmentId, LocalDateTime newTime) {
+        Long userId = securityUtil.getCurrentUser().getId();
+
+        // Fetch the doctor based on userId
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found for logged-in user"));
+
+        // Fetch the appointment using the appointmentId
+        DoctorAppointment doctorAppointment = doctorAppointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("DoctorAppointment not found"));
+
+        if (!doctorAppointment.getDoctor().getId().equals(doctor.getId())) {
+            throw new RuntimeException("Unauthorized: You can only reschedule your own appointments");
+        }
+
+        doctorAppointment.setAppointmentTime(newTime);
+        doctorAppointment.setStatus(AppointmentStatus.RESCHEDULED);
+
+        return doctorMapper.toDto(doctorAppointmentRepository.save(doctorAppointment));
+    }
+
+    @Override
+    public void cancelAppointment(Long appointmentId) {
+        Long userId = securityUtil.getCurrentUser().getId();
+
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found for logged-in user"));
+
+        DoctorAppointment doctorAppointment = doctorAppointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("DoctorAppointment not found"));
+
+        if (!doctorAppointment.getDoctor().getId().equals(doctor.getId())) {
+            throw new RuntimeException("Unauthorized: You can only cancel your own appointments");
+        }
+
+        doctorAppointment.setStatus(AppointmentStatus.CANCELLED);
+        doctorAppointmentRepository.save(doctorAppointment);
+    }
+
 }
+
