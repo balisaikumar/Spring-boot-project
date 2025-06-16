@@ -1,10 +1,13 @@
 package com.brinta.hcms.service.impl;
 
+import com.brinta.hcms.dto.PatientDto;
 import com.brinta.hcms.dto.TokenPair;
+import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
+import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.PatientMapper;
@@ -18,6 +21,9 @@ import com.brinta.hcms.service.PatientService;
 import com.brinta.hcms.utility.SecurityUtil;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -26,6 +32,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -174,4 +182,44 @@ public class PatientServiceImpl implements PatientService {
         return patientRepository.save(patient);
     }
 
+    @Override
+    public List<PatientDto> findBy(Long patientId, String contactNumber, String email) {
+
+        //Check Null Input Values
+        if (patientId == null && (contactNumber == null || contactNumber.isEmpty())
+                && (email == null || email.isEmpty())) {
+            throw new ResourceNotFoundException("Enter Correct Input");
+        }
+
+        Optional<Patient> patient =
+                patientRepository.findByIdOrContactNumberOrEmail(patientId, contactNumber, email);
+
+        if (patient.isEmpty()) {
+            throw new ResourceNotFoundException("No Matching Patient found in Database");
+        }
+
+        return patient.stream().map(patientMapper::findBy).collect(Collectors.toList());
+
+    }
+
+    @Override
+    public Page<PatientDto> getWithPagination(int page, int size) {
+
+        if (page < 0 || size <= 0) {
+            throw new
+                    InvalidRequestException("Page index must not be negative and size " +
+                    "must be greater than zero.");
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Patient> patientPage = patientRepository.findAll(pageable);
+
+        if (patientPage.isEmpty()) {
+            return Page.empty();
+        }
+
+        return patientPage.map(patientMapper::toDto);
+    }
+
 }
+
