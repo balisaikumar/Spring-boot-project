@@ -1,5 +1,7 @@
 package com.brinta.hcms.controller;
 
+import com.brinta.hcms.dto.DoctorDto;
+import com.brinta.hcms.dto.PatientDto;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
@@ -20,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -62,7 +65,7 @@ public class PatientController {
         return ResponseEntity.ok(tokenPair);
     }
 
-    @PutMapping(value = "/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/profile/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('PATIENT')")
     @Operation(summary = "Update Patient",
             responses = {
@@ -85,4 +88,48 @@ public class PatientController {
         }
     }
 
+    @GetMapping(value = "/findBy", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('PATIENT')")
+    @Operation(summary = "Get Patient By Parameters",
+            responses = {
+                    @ApiResponse(responseCode = "200",
+                            description = "Patient found",
+                            content = @Content(schema = @Schema(implementation = PatientDto.class))),
+                    @ApiResponse(responseCode = "404",
+                            description = "No matching patient found"),
+                    @ApiResponse(responseCode = "400",
+                            description = "Enter input field")
+            })
+    public ResponseEntity<?> findByParams(@RequestParam(required = false) Long patientId,
+                                          @RequestParam(required = false) String contactNumber,
+                                          @RequestParam(required = false) String email) {
+        List<PatientDto> patient = patientService.findBy(patientId, contactNumber, email);
+        if (patient.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error",
+                    "No patient found with given criteria."));
+        }
+
+        return ResponseEntity.ok(patient);
+    }
+
+    @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get All Patient With Pagination",
+            responses = {
+                    @ApiResponse(description = "List of patients",
+                            responseCode = "200",
+                            content = @Content(schema = @Schema(implementation = PatientDto.class))),
+                    @ApiResponse(description = "No patients found", responseCode = "404")
+            })
+    public ResponseEntity<?> getPatientsRecords(@RequestParam(defaultValue = "0") int page,
+                                              @RequestParam(defaultValue = "10") int size) {
+        var patients = patientService.getWithPagination(page, size);
+        return patients.isEmpty()
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(Map.of("patients", patients.getContent(),
+                "currentPage", patients.getNumber(),
+                "totalPages", patients.getTotalPages(),
+                "totalElements", patients.getTotalElements()));
+    }
 }
+

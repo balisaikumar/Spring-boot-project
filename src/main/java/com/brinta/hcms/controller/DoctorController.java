@@ -65,14 +65,13 @@ public class DoctorController {
     }
 
     @GetMapping(value = "/findBy", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Get Doctor By Parameters",
             responses = {
                     @ApiResponse(responseCode = "200",
                             description = "Doctor found",
                             content = @Content(schema = @Schema(implementation = DoctorDto.class))),
                     @ApiResponse(responseCode = "404",
-                            description = "No matching parent found"),
+                            description = "No matching doctor found"),
                     @ApiResponse(responseCode = "400",
                             description = "Enter input field")
             })
@@ -88,23 +87,23 @@ public class DoctorController {
     }
 
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get All Doctors With Pagination",
             responses = {
-                    @ApiResponse(description = "List of parents",
+                    @ApiResponse(description = "List of doctors",
                             responseCode = "200",
                             content = @Content(schema = @Schema(implementation = DoctorDto.class))),
-                    @ApiResponse(description = "No parents found", responseCode = "404")
+                    @ApiResponse(description = "No doctors found", responseCode = "404")
             })
     public ResponseEntity<?> getDoctorRecords(@RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "10") int size) {
-        var parents = doctorService.getWithPagination(page, size);
-        return parents.isEmpty()
+        var doctors = doctorService.getWithPagination(page, size);
+        return doctors.isEmpty()
                 ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(Map.of("doctors", parents.getContent(),
-                "currentPage", parents.getNumber(),
-                "totalPages", parents.getTotalPages(),
-                "totalElements", parents.getTotalElements()));
+                : ResponseEntity.ok(Map.of("doctors", doctors.getContent(),
+                "currentPage", doctors.getNumber(),
+                "totalPages", doctors.getTotalPages(),
+                "totalElements", doctors.getTotalElements()));
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)

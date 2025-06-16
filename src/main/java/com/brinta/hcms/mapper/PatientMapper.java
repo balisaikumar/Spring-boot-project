@@ -1,6 +1,8 @@
 package com.brinta.hcms.mapper;
 
+import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.dto.PatientDto;
+import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
@@ -23,6 +25,8 @@ public interface PatientMapper {
     Patient register(RegisterPatientRequest request, User user);
 
     void update(UpdatePatientRequest updatePatientRequest, @MappingTarget Patient patient);
+
+    PatientDto findBy(Patient patient);
 
     PatientDto toDto(Patient patient);
 
