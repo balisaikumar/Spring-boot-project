@@ -1,23 +1,26 @@
 package com.brinta.hcms.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
-@Getter
-@Setter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "Doctor")
-public class Doctor {
+@Table(name = "patient")
+public class Patient {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore // this hides the user field in the output
+    private User user;
 
     @Column(nullable = false)
     private String name;
@@ -26,17 +29,9 @@ public class Doctor {
     private String email;
 
     @Column(nullable = false)
-    private String specialization;
-
-    @Column(nullable = false)
     private String contactNumber;
 
     @Column(nullable = false)
-    private String qualification;
-
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id")
-    @JsonBackReference
-    private User user;
+    private String address;
 
 }

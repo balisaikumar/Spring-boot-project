@@ -1,5 +1,6 @@
 package com.brinta.hcms.dto;
 
+import com.brinta.hcms.enums.Roles;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,14 +8,12 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class DoctorDto {
+public class UserDto {
 
-    private String name;
+    private String username;
 
-    private String contactNumber;
+    private String email;
 
-    private String specialization;
-
-    private String qualification;
+    private Roles role;
 
 }

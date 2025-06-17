@@ -1,12 +1,15 @@
 package com.brinta.hcms.controller;
 
+import com.brinta.hcms.dto.DoctorAppointmentDto;
 import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.entity.Doctor;
-import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
+import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
-import com.brinta.hcms.request.registerRequest.RegisterDoctor;
+import com.brinta.hcms.request.registerRequest.LoginRequest;
+import com.brinta.hcms.request.updateRequest.RescheduleAppointmentRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import com.brinta.hcms.service.DoctorService;
+import com.brinta.hcms.utility.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -15,15 +18,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/doctor/api")
+@RequestMapping("/doctor")
 @Tag(name = "Doctor Profile API", description = "Operations Related to Doctor")
 @AllArgsConstructor
 public class DoctorController {
@@ -31,24 +36,18 @@ public class DoctorController {
     @Autowired
     private DoctorService doctorService;
 
-    @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Register Doctor", responses = {
-            @ApiResponse(description = "Added Doctor in the database",
-                    responseCode = "201",
-                    content = @Content(schema = @Schema(implementation = Doctor.class))),
-            @ApiResponse(description = "Email already exists", responseCode = "400")})
-    public ResponseEntity<?> create(@Valid @RequestBody RegisterDoctor registerDoctor) {
+    @PostMapping("/login")
+    public ResponseEntity<?> doctorLogin(@RequestBody LoginRequest request) {
         try {
-            Doctor createdParent = doctorService.register(registerDoctor);
-            return ResponseEntity.status(201)
-                    .body(Map.of("message", "Doctor registered successfully!",
-                            "doctor", createdParent));
-        } catch (DuplicateEntryException exception) {
-            return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
+            Map<String, Object> response = doctorService.doctorLogin(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(401).body(Map.of("error", ex.getMessage()));
         }
     }
 
     @PutMapping(value = "/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Update Doctor",
             responses = {
                     @ApiResponse(description = "Parent details updated successfully",
@@ -58,7 +57,7 @@ public class DoctorController {
                     @ApiResponse(description = "Invalid input data",
                             responseCode = "400")
             })
-    public ResponseEntity<?> updateParent(@PathVariable Long id,
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id,
                                           @Valid @RequestBody UpdateDoctorRequest updateDoctorRequest) {
         try {
             Doctor updatedDoctor = doctorService.update(id, updateDoctorRequest);
@@ -71,6 +70,7 @@ public class DoctorController {
     }
 
     @GetMapping(value = "/findBy", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Get Doctor By Parameters",
             responses = {
                     @ApiResponse(responseCode = "200",
@@ -82,9 +82,9 @@ public class DoctorController {
                             description = "Enter input field")
             })
     public ResponseEntity<?> findByParams(@RequestParam(required = false) Long doctorId,
-                                          @RequestParam(required = false) String contact,
+                                          @RequestParam(required = false) String contactNumber,
                                           @RequestParam(required = false) String email) {
-        List<DoctorDto> doctor = doctorService.findBy(doctorId, contact, email);
+        List<DoctorDto> doctor = doctorService.findBy(doctorId, contactNumber, email);
         if (doctor.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of("error",
                     "No doctor found with given criteria."));
@@ -93,6 +93,7 @@ public class DoctorController {
     }
 
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Get All Doctors With Pagination",
             responses = {
                     @ApiResponse(description = "List of parents",
@@ -100,7 +101,7 @@ public class DoctorController {
                             content = @Content(schema = @Schema(implementation = DoctorDto.class))),
                     @ApiResponse(description = "No parents found", responseCode = "404")
             })
-    public ResponseEntity<?> getParentRecords(@RequestParam(defaultValue = "0") int page,
+    public ResponseEntity<?> getDoctorRecords(@RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "10") int size) {
         var parents = doctorService.getWithPagination(page, size);
         return parents.isEmpty()
@@ -112,13 +113,14 @@ public class DoctorController {
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Delete Doctor",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Doctor Deleted Successfully"),
                     @ApiResponse(responseCode = "400", description = "Enter input field"),
                     @ApiResponse(responseCode = "404", description = "Enter the correct ID")
             })
-    public ResponseEntity<?> deleteParentById(@PathVariable("id") Long doctorId) {
+    public ResponseEntity<?> deleteDoctorById(@PathVariable("id") Long doctorId) {
         try {
             doctorService.delete(doctorId);
             return ResponseEntity.ok(Map.of("message",
@@ -128,4 +130,66 @@ public class DoctorController {
         }
     }
 
+    @GetMapping(value = "/appointments", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
+    @Operation(summary = "List Appointments for Doctor", responses = {
+            @ApiResponse(description = "Fetched all appointments", responseCode = "200",
+                    content = @Content(schema = @Schema(implementation = DoctorAppointmentDto.class))),
+            @ApiResponse(description = "Invalid request parameters", responseCode = "400")
+    })
+    public ResponseEntity<?> listAppointments(@RequestParam(defaultValue = "0") int page,
+                                              @RequestParam(defaultValue = "10") int size) {
+        try {
+            Page<DoctorAppointmentDto> appointments = doctorService.listAppointments(page, size);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Appointments fetched successfully",
+                    "appointments", appointments.getContent(),
+                    "totalPages", appointments.getTotalPages(),
+                    "totalElements", appointments.getTotalElements(),
+                    "currentPage", appointments.getNumber()
+            ));
+        } catch (InvalidRequestException | ResourceNotFoundException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping(value = "rescheduleAppointment/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
+    @Operation(summary = "Reschedule DoctorAppointment", responses = {
+            @ApiResponse(description = "DoctorAppointment rescheduled", responseCode = "200"),
+            @ApiResponse(description = "DoctorAppointment not found", responseCode = "404")
+    })
+    public ResponseEntity<?> rescheduleAppointment(@PathVariable Long id,
+                                                   @Valid @RequestBody RescheduleAppointmentRequest request) {
+        try {
+            DoctorAppointmentDto updated = doctorService.rescheduleAppointment(id, request.getNewAppointmentTime());
+            return ResponseEntity.ok(Map.of(
+                    "message", "DoctorAppointment rescheduled successfully",
+                    "appointment", updated
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping(value = "cancelAppointment/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('DOCTOR')")
+    @Operation(summary = "Cancel DoctorAppointment", responses = {
+            @ApiResponse(description = "DoctorAppointment cancelled", responseCode = "200"),
+            @ApiResponse(description = "DoctorAppointment not found or unauthorized", responseCode = "404")
+    })
+    public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
+        try {
+            doctorService.cancelAppointment(id);  // doctorId handled internally using SecurityUtil
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Appointment cancelled successfully"
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
+    }
+
 }
+

@@ -7,14 +7,14 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class DoctorDto {
+public class PatientDto {
 
     private String name;
 
     private String contactNumber;
 
-    private String specialization;
+    private String address;
 
-    private String qualification;
+    private UserDto user;
 
 }

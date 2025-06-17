@@ -30,3 +30,9 @@ springdoc:
     displayRequestDuration: false
   api-docs:
     enabled: true
+
+app:
+  jwt:
+    secret: ${secret_token}
+    expiration: 360000
+    refresh-expiration: 86400000
