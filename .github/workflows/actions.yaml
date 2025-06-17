@@ -32,7 +32,7 @@ jobs:
 
       - name: Transfer WAR file to Lightsail
         run: |
-           scp -i lightsail_key.pem -o StrictHostKeyChecking=no target/*.jar ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }}:/home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.war
+           scp -i lightsail_key.pem -o StrictHostKeyChecking=no target/*.war ${{ secrets.LIGHTSAIL_USERNAME }}@${{ secrets.LIGHTSAIL_HOST }}:/home/${{ secrets.LIGHTSAIL_USERNAME }}/hcms-java.war
 
       - name: Deploy WAR on Lightsail
         run: |
