@@ -113,7 +113,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.equalsIgnoreCase(contextPath + "/user/logoutUserFromConcurrentSession")
                 || path.startsWith(contextPath + "/swagger-ui")
                 || path.startsWith(contextPath + "/api/auth/register")
-                || path.startsWith(contextPath + "/api/auth/login");
+                || path.startsWith(contextPath + "/api/auth/login")
+                || path.startsWith(contextPath + "/health/check");
     }
 
 }

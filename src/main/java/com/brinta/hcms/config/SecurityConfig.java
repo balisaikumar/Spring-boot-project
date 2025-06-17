@@ -62,7 +62,8 @@ public class SecurityConfig {
                                 "/patient/login",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/error"
+                                "/error",
+                                "/health/check"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
