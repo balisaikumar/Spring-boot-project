@@ -2,7 +2,7 @@ spring:
   application:
     name: Health Care Management System
   profiles:
-    active: dev
+    active: local
 
   jpa:
     open-in-view: false
@@ -33,6 +33,6 @@ springdoc:
 
 app:
   jwt:
-    secret: ${secret_token}
+    secret: b99216f78e5369541457eb679501c510e106417a2a369f936f237f50ed955b7db99216f78e5369541457eb679501c510e106417a2a369f936f237f50ed955b7d
     expiration: 360000
     refresh-expiration: 86400000
