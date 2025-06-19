@@ -19,7 +19,7 @@ public class GlobalCorsConfig {
         config.setAllowCredentials(true);
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "https://devops.d2ebtk9sapc593.amplifyapp.com"
+                "https://devops.d1zop4g5qvr3ao.amplifyapp.com"
         ));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
