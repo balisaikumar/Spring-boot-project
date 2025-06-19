@@ -21,11 +21,11 @@
         </encoder>
     </appender>
 
-    <logger name="org.springframework" level="DEBUG"/>
-    <logger name="org.hibernate" level="DEBUG"/>
-    <logger name="com.hcms" level="TRACE"/>
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="com.hcms" level="DEBUG"/>
 
-    <root level="TRACE">
+    <root level="DEBUG">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>
