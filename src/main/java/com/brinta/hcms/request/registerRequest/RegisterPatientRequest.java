@@ -1,5 +1,6 @@
 package com.brinta.hcms.request.registerRequest;
 
+import com.brinta.hcms.enums.PatientRegistrationStatus;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
@@ -25,5 +26,7 @@ public class RegisterPatientRequest {
 
     @NotBlank(message = "Address is required")
     private String address;
+
+    private PatientRegistrationStatus status;
 
 }

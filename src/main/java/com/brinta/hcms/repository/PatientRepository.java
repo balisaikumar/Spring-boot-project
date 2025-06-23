@@ -1,11 +1,11 @@
 package com.brinta.hcms.repository;
 
-import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.Patient;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PatientRepository extends JpaRepository<Patient, Long> {
@@ -16,8 +16,10 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
             "u.patient.contactNumber = :contactNumber")
     boolean existsByPatientContactNumber(@Param("contactNumber") String contactNumber);
 
-    Optional<Patient> findByIdOrContactNumberOrEmail(Long patientID, String contactNumber,
-                                                     String email);
+    List<Patient> findByIdOrContactNumberOrEmail(Long patientID, String contactNumber,
+                                                 String email);
 
+    Optional<Patient> findByUserId(Long userId);
 
 }
+
