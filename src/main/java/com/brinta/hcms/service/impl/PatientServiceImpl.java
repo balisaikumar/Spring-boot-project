@@ -2,9 +2,10 @@ package com.brinta.hcms.service.impl;
 
 import com.brinta.hcms.dto.PatientDto;
 import com.brinta.hcms.dto.TokenPair;
-import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.User;
+import com.brinta.hcms.enums.PatientRegistrationStatus;
+import com.brinta.hcms.enums.ProfileStatus;
 import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.EmailAlreadyExistsException;
 import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
@@ -13,12 +14,18 @@ import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.PatientMapper;
 import com.brinta.hcms.repository.PatientRepository;
 import com.brinta.hcms.repository.UserRepository;
+import com.brinta.hcms.request.ForgotPasswordRequest;
+import com.brinta.hcms.request.ResetPasswordRequest;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.request.updateRequest.UpdatePatientRequest;
+import com.brinta.hcms.service.EmailService;
 import com.brinta.hcms.service.JwtService;
 import com.brinta.hcms.service.PatientService;
+import com.brinta.hcms.utility.LoggerUtil;
 import com.brinta.hcms.utility.SecurityUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -31,13 +38,18 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
+@Transactional
 public class PatientServiceImpl implements PatientService {
+
+    private static final Class<?> logger = PatientServiceImpl.class;
 
     @Autowired
     private UserRepository userRepository;
@@ -57,54 +69,32 @@ public class PatientServiceImpl implements PatientService {
     @Autowired
     private SecurityUtil securityUtil;
 
+    @Autowired
+    private EmailService emailService;
+
     private static Authentication getAuthentication1(User userEntity) {
         if (!Roles.PATIENT.name().equalsIgnoreCase(userEntity.getRole().name())) {
             throw new RuntimeException("Access denied: Not a patient account");
         }
 
-        // Step 5: Build UserDetails with authorities
-        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_PATIENT"));
-        org.springframework.security.core.userdetails.User userDetails =
-                new org.springframework.security.core.userdetails.User(
-                        userEntity.getEmail(),
-                        userEntity.getPassword(),
-                        authorities
-                );
+        List<GrantedAuthority> authorities = List
+                .of(new SimpleGrantedAuthority("ROLE_PATIENT"));
 
-        // Step 6: Create Authentication with UserDetails as principal
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userDetails, null, authorities
-        );
-        return authentication;
-    }
+        org.springframework.security.core.userdetails.User userDetails = new org
+                .springframework.security.core.userdetails
+                .User(userEntity.getEmail(), userEntity.getPassword(), authorities);
 
-    private static Authentication getAuthentication(User user) {
-        if (!Roles.PATIENT.name().equalsIgnoreCase(user.getRole().name())) {
-            throw new RuntimeException("Access denied: Not a patient account");
-        }
-
-        // Create an authentication object (with authorities, if needed for JWT)
-        List<GrantedAuthority> authorities = List.of(new
-                SimpleGrantedAuthority("ROLE_PATIENT"));
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                user.getEmail(), null, authorities
-        );
-        return authentication;
+        return new UsernamePasswordAuthenticationToken(userDetails, null,
+                authorities);
     }
 
     @Override
-    public Patient registerPatient(RegisterPatientRequest request) {
+    public Patient registerPatientOnline(RegisterPatientRequest request) {
+        LoggerUtil.info(logger,
+                "Attempting online registration for patient email:" + " {}",
+                request.getEmail());
 
-        boolean emailExists = patientRepository.existsByEmail(request.getEmail());
-        boolean contactExists = patientRepository.existsByPatientContactNumber(request.getContactNumber());
-
-        if (emailExists || contactExists) {
-            StringBuilder errorMessage = new StringBuilder("Already Exists: ");
-            if (emailExists) errorMessage.append("Email: ").append(request.getEmail());
-            if (emailExists && contactExists) errorMessage.append(" | ");
-            if (contactExists) errorMessage.append("Contact: ").append(request.getContactNumber());
-            throw new EmailAlreadyExistsException(errorMessage.toString());
-        }
+        validateEmailAndContact(request);
 
         User user = new User();
         user.setUsername(request.getUserName());
@@ -113,112 +103,279 @@ public class PatientServiceImpl implements PatientService {
         user.setRole(Roles.PATIENT);
         user.setName(request.getName());
 
-        Patient patient = patientMapper.register(request, user); // entity mapped with full user
-        patient.setUser(user); // just in case
-        user.setPatient(patient); // set bidirectional relationship
+        Patient patient = patientMapper.register(request, user);
+        patient.setUser(user);
+        patient.setStatus(PatientRegistrationStatus.ONLINE);
+        patient.setProfileStatus(ProfileStatus.COMPLETED);
 
-        userRepository.save(user); // Cascade saves both
+        user.setPatient(patient);
 
+        userRepository.save(user);
+        LoggerUtil.info(logger,
+                "Online patient registration successful for email: " + "{}",
+                request.getEmail());
         return patient;
     }
 
     @Override
-    public TokenPair patientLogin(LoginRequest request) {
+    public Patient registerPatientOffline(RegisterPatientRequest request) {
+        LoggerUtil.info(logger,
+                "Admin attempting offline registration for" + "patient email: {}",
+                request.getEmail());
 
-        // Validate input
+        validateEmailAndContact(request);
+
+        User user = new User();
+        user.setUsername(request.getUserName());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(Roles.PATIENT);
+        user.setName(request.getName());
+
+        Patient patient = patientMapper.register(request, user);
+        patient.setUser(user);
+        patient.setStatus(PatientRegistrationStatus.OFFLINE);
+        patient.setProfileStatus(ProfileStatus.COMPLETED);
+
+        user.setPatient(patient);
+
+        userRepository.save(user);
+        LoggerUtil.info(logger, "Offline patient registration successful " +
+                "for email: {}", request.getEmail());
+        return patient;
+    }
+
+    private void validateEmailAndContact(RegisterPatientRequest request) {
+        boolean emailExists = patientRepository.existsByEmail(request.getEmail());
+        boolean contactExists = patientRepository
+                .existsByPatientContactNumber(request.getContactNumber());
+
+        if (emailExists || contactExists) {
+            StringBuilder errorMessage = new StringBuilder("Already Exists: ");
+            if (emailExists) errorMessage.append("Email: ").append(request.getEmail());
+            if (emailExists && contactExists) errorMessage.append(" | ");
+            if (contactExists) errorMessage.append("Contact: ")
+                    .append(request.getContactNumber());
+
+            LoggerUtil.warn(logger, "Registration failed due to duplication: " +
+                    "{}", errorMessage);
+            throw new EmailAlreadyExistsException(errorMessage.toString());
+        }
+    }
+
+    @Override
+    public TokenPair patientLogin(LoginRequest request) {
+        LoggerUtil.info(logger, "Patient login attempt for email: {}",
+                request.getEmail());
+
         if (request.getEmail() == null || request.getPassword() == null) {
-            throw new IllegalArgumentException("Email and password must be provided");
+            LoggerUtil.warn(logger, "Login failed: Missing email or password.");
+            throw new InvalidRequestException("Email and password must be provided");
         }
 
-        // Find user by email
         User userEntity = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() ->
-                        new RuntimeException("User not found with email: " + request.getEmail()));
+                .orElseThrow(() -> {
+            LoggerUtil.warn(logger, "Login failed: No user found with email: {}",
+                    request.getEmail());
+            return new RuntimeException("User not found with email: " +
+                    request.getEmail());
+        });
 
-        // Check password
-        if (userEntity.getPassword() == null ||
-                !passwordEncoder.matches(request.getPassword(), userEntity.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), userEntity.getPassword())) {
+            LoggerUtil.warn(logger, "Login failed: Invalid password for email:"
+                    + " {}", request.getEmail());
             throw new RuntimeException("Invalid password");
         }
 
-        // Ensure a role is PATIENT
         Authentication authentication = getAuthentication1(userEntity);
 
-        // Generate and return TokenPair
+        LoggerUtil.info(logger, "Patient login successful for email: {}",
+                request.getEmail());
+
         return jwtService.generateTokenPair(authentication);
     }
 
     @Override
-    public Patient update(Long patientId, UpdatePatientRequest updatePatientRequest) {
-        // Fetch the patient to update
-        Patient patient = patientRepository.findById(patientId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("The entered ID is not valid in the Database"));
+    public void forgotPassword(ForgotPasswordRequest request,
+                               HttpServletRequest httpRequest) {
+        LoggerUtil.info(logger, "Forgot password attempt for email: {}",
+                request.getEmail());
 
-        // Get currently authenticated user
-        User currentUser = securityUtil.getCurrentUser();  // Inject SecurityUtil via constructor
-
-        // Check ownership
-        if (!patient.getUser().getId().equals(currentUser.getId())) {
-            throw new UnAuthException("You are not authorized to update this patient's details.");
+        // Check if user exists by email
+        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
+        if (optionalUser.isEmpty()) {
+            LoggerUtil.warn(logger, "Forgot password failed: No user found " +
+                    "with email: {}", request.getEmail());
+            throw new ResourceNotFoundException("User not found with email: " +
+                    request.getEmail());
         }
 
-        // Proceed with update
+        User user = optionalUser.get(); //Unwrap the Optional
+
+        // Generate unique token
+        String token = UUID.randomUUID().toString();
+        user.setResetToken(token);
+
+        // Optional: Set token expiry (if you want expiry feature)
+        user.setTokenExpiryDate(LocalDateTime.now().plusMinutes(15));
+
+        userRepository.save(user);
+
+        // Dynamically build base URL (http/https + domain + port)
+        String appUrl = httpRequest.getScheme() + "://" + // http or https
+                httpRequest.getServerName() +     // domain name or localhost
+                ":" + httpRequest.getServerPort(); // port
+
+        String resetLink = appUrl + "/patient/reset-password?token=" + token;
+        String emailContent = "Dear " + user.getUsername() + ",\n\n" +
+                "To reset your password, click the following link:\n" +
+                resetLink + "\n\nThis link will expire in 15 minutes.\n\nRegards," +
+                "\nHealthCare System Team";
+
+        // Send email
+        emailService.sendEmail(user.getEmail(), "Password Reset Request",
+                emailContent);
+
+        LoggerUtil.info(logger, "Password reset token generated and email sent" +
+                " for user: {}", user.getEmail());
+    }
+
+
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        LoggerUtil.info(logger, "Password reset token attempt with token: {}",
+                request.getToken());
+
+        Optional<User> optionalUser = userRepository.findByResetToken(request.getToken());
+        if (optionalUser.isEmpty()) {
+            throw new ResourceNotFoundException("Invalid password reset token");
+        }
+
+        User user = optionalUser.get(); // unwrap Optional
+
+        // Check if token expired
+        if (user.getTokenExpiryDate() != null && user.getTokenExpiryDate()
+                .isBefore(LocalDateTime.now())) {
+            LoggerUtil.warn(logger, "Password reset failed: Token expired " +
+                    "for user: {}", user.getEmail());
+            throw new RuntimeException("Password reset token has expired. " +
+                    "Please request a new one.");
+        }
+
+        // Token valid, proceed to reset
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetToken(null); // clear token after use
+
+        // Optional: Clear token expiry date too if you have it
+        user.setTokenExpiryDate(null);
+
+        userRepository.save(user);
+
+        LoggerUtil.info(logger, "Password reset successful for user: {}",
+                user.getEmail());
+
+    }
+
+    @Override
+    public Patient update(Long patientId, UpdatePatientRequest updatePatientRequest) {
+        Patient patient = patientRepository.findById(patientId).orElseThrow(() -> {
+            LoggerUtil.warn(logger, "Update failed: Patient not found with ID:"
+                    + " {}", patientId);
+            return new ResourceNotFoundException("The entered ID is not valid "
+                    + "in the Database");
+        });
+
+        User currentUser = securityUtil.getCurrentUser();
+
+        if (!patient.getUser().getId().equals(currentUser.getId())) {
+            LoggerUtil.warn(logger, "Unauthorized update attempt by user ID:"
+                    + " {} for patient ID: {}", currentUser.getId(), patientId);
+            throw new UnAuthException("You are not authorized to update"
+                    + " this patient's details.");
+        }
+
         patientMapper.update(updatePatientRequest, patient);
 
         User user = patient.getUser();
-
         if (user != null) {
-            if (updatePatientRequest.getName() != null) {
+            if (updatePatientRequest.getName() != null)
                 user.setName(updatePatientRequest.getName());
-            }
-            if (updatePatientRequest.getEmail() != null) {
+            if (updatePatientRequest.getEmail() != null)
                 user.setEmail(updatePatientRequest.getEmail());
-            }
-
             userRepository.save(user);
         }
 
+        LoggerUtil.info(logger, "Patient update successful for patient ID: {}",
+                patientId);
         return patientRepository.save(patient);
     }
 
     @Override
     public List<PatientDto> findBy(Long patientId, String contactNumber, String email) {
 
-        //Check Null Input Values
-        if (patientId == null && (contactNumber == null || contactNumber.isEmpty())
-                && (email == null || email.isEmpty())) {
+        if (patientId == null && (contactNumber == null || contactNumber.isEmpty()) &&
+                (email == null || email.isEmpty())) {
+            LoggerUtil.warn(logger, "FindBy failed: No valid input provided.");
             throw new ResourceNotFoundException("Enter Correct Input");
         }
 
-        Optional<Patient> patient =
-                patientRepository.findByIdOrContactNumberOrEmail(patientId, contactNumber, email);
+        List<Patient> patientList = patientRepository
+                .findByIdOrContactNumberOrEmail(patientId, contactNumber, email);
 
-        if (patient.isEmpty()) {
+        if (patientList == null || patientList.isEmpty()) {
+            LoggerUtil.warn(logger, "FindBy failed: No matching patient found "
+                    + "for ID: {}, contact: {}, email: {}", patientId, contactNumber, email);
             throw new ResourceNotFoundException("No Matching Patient found in Database");
         }
 
-        return patient.stream().map(patientMapper::findBy).collect(Collectors.toList());
-
+        LoggerUtil.info(logger, "FindBy successful for {} patient(s).",
+                patientList.size());
+        return patientList.stream().map(patientMapper::findBy).collect(Collectors.toList());
     }
 
     @Override
     public Page<PatientDto> getWithPagination(int page, int size) {
-
         if (page < 0 || size <= 0) {
-            throw new
-                    InvalidRequestException("Page index must not be negative and size " +
-                    "must be greater than zero.");
+            LoggerUtil.warn(logger, "Pagination failed: Invalid page" +
+                    " index or size.");
+            throw new InvalidRequestException("Page index must not be negative " +
+                    "and size must be greater than zero.");
         }
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Patient> patientPage = patientRepository.findAll(pageable);
 
-        if (patientPage.isEmpty()) {
-            return Page.empty();
+        return patientPage.map(patientMapper::toDto);
+    }
+
+    @Override
+    public void delete(Long patientId) {
+        User currentUser = securityUtil.getCurrentUser();
+
+        Patient patientToDelete = patientRepository.findById(patientId)
+                .orElseThrow(() -> {
+            LoggerUtil.warn(logger, "Delete failed: Patient not found " +
+                    "with ID:" + " {}", patientId);
+            return new ResourceNotFoundException("Patient not found");
+        });
+
+        if (currentUser.getRole().equals(Roles.PATIENT)) {
+            if (!patientToDelete.getUser().getId().equals(currentUser.getId())) {
+                LoggerUtil.warn(logger, "Unauthorized delete attempt by user ID:"
+                        + " {} for patient ID: {}", currentUser.getId(), patientId);
+                throw new UnAuthException("You are not authorized to delete " +
+                        "this patient profile.");
+            }
+        } else if (!currentUser.getRole().equals(Roles.ADMIN)) {
+            LoggerUtil.warn(logger, "Unauthorized role attempt for delete" +
+                    " by user ID: {}", currentUser.getId());
+            throw new UnAuthException("Only patient or admin can delete the profile.");
         }
 
-        return patientPage.map(patientMapper::toDto);
+        patientRepository.delete(patientToDelete);
+        userRepository.delete(patientToDelete.getUser());
+        LoggerUtil.info(logger, "Patient and user deleted successfully" +
+                " for patient ID: {}", patientId);
     }
 
 }
