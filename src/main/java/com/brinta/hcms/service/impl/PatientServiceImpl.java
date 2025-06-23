@@ -2,7 +2,6 @@ package com.brinta.hcms.service.impl;
 
 import com.brinta.hcms.dto.PatientDto;
 import com.brinta.hcms.dto.TokenPair;
-import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.enums.Roles;
@@ -22,6 +21,7 @@ import com.brinta.hcms.utility.SecurityUtil;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -31,6 +31,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -184,42 +185,39 @@ public class PatientServiceImpl implements PatientService {
 
     @Override
     public List<PatientDto> findBy(Long patientId, String contactNumber, String email) {
-
-        //Check Null Input Values
         if (patientId == null && (contactNumber == null || contactNumber.isEmpty())
                 && (email == null || email.isEmpty())) {
             throw new ResourceNotFoundException("Enter Correct Input");
         }
 
-        Optional<Patient> patient =
-                patientRepository.findByIdOrContactNumberOrEmail(patientId, contactNumber, email);
+        List<Patient> patients = patientRepository.findByParams(patientId, contactNumber, email);
 
-        if (patient.isEmpty()) {
+        if (patients.isEmpty()) {
             throw new ResourceNotFoundException("No Matching Patient found in Database");
         }
 
-        return patient.stream().map(patientMapper::findBy).collect(Collectors.toList());
-
+        return patients.stream().map(patientMapper::findBy).toList();
     }
 
-    @Override
-    public Page<PatientDto> getWithPagination(int page, int size) {
 
+    public Page<PatientDto> getWithPagination(int page, int size) {
         if (page < 0 || size <= 0) {
-            throw new
-                    InvalidRequestException("Page index must not be negative and size " +
-                    "must be greater than zero.");
+            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<Patient> patientPage = patientRepository.findAll(pageable);
 
-        if (patientPage.isEmpty()) {
-            return Page.empty();
-        }
 
-        return patientPage.map(patientMapper::toDto);
+        List<Patient> patientsWithUser = patientRepository.findAllWithUser(pageable);
+
+        // Convert List<Patient> to Page<PatientDto>
+        List<PatientDto> dtoList = patientsWithUser.stream()
+                .map(patientMapper::toDto)
+                .toList();
+
+        return new PageImpl<>(dtoList, pageable, dtoList.size()); // custom page response
     }
+
 
 }
 

@@ -89,7 +89,7 @@ public class PatientController {
     }
 
     @GetMapping(value = "/findBy", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get Patient By Parameters",
             responses = {
                     @ApiResponse(responseCode = "200",

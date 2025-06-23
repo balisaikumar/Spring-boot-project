@@ -93,7 +93,7 @@ public class DoctorController {
     }
 
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get All Doctors With Pagination",
             responses = {
                     @ApiResponse(description = "List of parents",
