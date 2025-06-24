@@ -29,10 +29,7 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
             @Param("email") String email
     );
 
-
-
-
     @Query("SELECT p FROM Patient p JOIN FETCH p.user")
-    List<Patient> findAllWithUser(Pageable pageable);
+        List<Patient> findAllWithUser(Pageable pageable);
 
 }
