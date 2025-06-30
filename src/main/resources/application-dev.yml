@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:mysql://15.207.207.149:3306/hcms
+    url: jdbc:mysql://15.207.207.149:3306/hcms-dev
     username: dev
     password: Root@123
     driver-class-name: com.mysql.cj.jdbc.Driver

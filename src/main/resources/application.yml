@@ -2,7 +2,7 @@ spring:
   application:
     name: Health Care Management System
   profiles:
-    active: local
+    active: dev
 
   jpa:
     open-in-view: false

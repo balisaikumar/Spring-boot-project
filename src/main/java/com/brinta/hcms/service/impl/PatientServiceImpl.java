@@ -29,6 +29,7 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -38,7 +39,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -312,40 +315,36 @@ public class PatientServiceImpl implements PatientService {
 
     @Override
     public List<PatientDto> findBy(Long patientId, String contactNumber, String email) {
-
-        if (patientId == null && (contactNumber == null || contactNumber.isEmpty()) &&
-                (email == null || email.isEmpty())) {
-            LoggerUtil.warn(logger, "FindBy failed: No valid input provided.");
+        if (patientId == null && (contactNumber == null || contactNumber.isEmpty())
+                && (email == null || email.isEmpty())) {
             throw new ResourceNotFoundException("Enter Correct Input");
         }
 
-        List<Patient> patientList = patientRepository
-                .findByIdOrContactNumberOrEmail(patientId, contactNumber, email);
+        List<Patient> patients = patientRepository.findByParams(patientId, contactNumber, email);
 
-        if (patientList == null || patientList.isEmpty()) {
-            LoggerUtil.warn(logger, "FindBy failed: No matching patient found "
-                    + "for ID: {}, contact: {}, email: {}", patientId, contactNumber, email);
+        if (patients.isEmpty()) {
             throw new ResourceNotFoundException("No Matching Patient found in Database");
         }
 
-        LoggerUtil.info(logger, "FindBy successful for {} patient(s).",
-                patientList.size());
-        return patientList.stream().map(patientMapper::findBy).collect(Collectors.toList());
+        return patients.stream().map(patientMapper::findBy).toList();
     }
 
-    @Override
+
     public Page<PatientDto> getWithPagination(int page, int size) {
         if (page < 0 || size <= 0) {
-            LoggerUtil.warn(logger, "Pagination failed: Invalid page" +
-                    " index or size.");
-            throw new InvalidRequestException("Page index must not be negative " +
-                    "and size must be greater than zero.");
+            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
+
         }
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<Patient> patientPage = patientRepository.findAll(pageable);
+         List<Patient> patientsWithUser = patientRepository.findAllWithUser(pageable);
 
-        return patientPage.map(patientMapper::toDto);
+        // Convert List<Patient> to Page<PatientDto>
+        List<PatientDto> dtoList = patientsWithUser.stream()
+                .map(patientMapper::toDto)
+                .toList();
+
+        return new PageImpl<>(dtoList, pageable, dtoList.size()); // custom page response
     }
 
     @Override
@@ -376,7 +375,9 @@ public class PatientServiceImpl implements PatientService {
         userRepository.delete(patientToDelete.getUser());
         LoggerUtil.info(logger, "Patient and user deleted successfully" +
                 " for patient ID: {}", patientId);
+
     }
+
 
 }
 

@@ -1,6 +1,7 @@
 package com.brinta.hcms.repository;
 
 import com.brinta.hcms.entity.Patient;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,10 +17,18 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
             "u.patient.contactNumber = :contactNumber")
     boolean existsByPatientContactNumber(@Param("contactNumber") String contactNumber);
 
-    List<Patient> findByIdOrContactNumberOrEmail(Long patientID, String contactNumber,
-                                                 String email);
+    @Query("SELECT p FROM Patient p JOIN FETCH p.user WHERE " +
+            "(:id IS NULL OR p.id = :id) AND " +
+            "(:contactNumber IS NULL OR p.contactNumber = :contactNumber) AND " +
+            "(:email IS NULL OR p.email = :email)")
+    List<Patient> findByParams(
+            @Param("id") Long id,
+            @Param("contactNumber") String contactNumber,
+            @Param("email") String email
+    );
 
-    Optional<Patient> findByUserId(Long userId);
+    @Query("SELECT p FROM Patient p JOIN FETCH p.user")
+        List<Patient> findAllWithUser(Pageable pageable);
 
 }
 

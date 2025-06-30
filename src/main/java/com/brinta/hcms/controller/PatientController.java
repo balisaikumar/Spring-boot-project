@@ -115,7 +115,17 @@ public class PatientController {
     }
 
     @GetMapping(value = "/findBy", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get Patient By Parameters",
+            responses = {
+                    @ApiResponse(responseCode = "200",
+                            description = "Patient found",
+                            content = @Content(schema = @Schema(implementation = PatientDto.class))),
+                    @ApiResponse(responseCode = "404",
+                            description = "No matching patient found"),
+                    @ApiResponse(responseCode = "400",
+                            description = "Enter input field")
+            })
     public ResponseEntity<?> findByParams(@RequestParam(required = false) Long patientId,
                                           @RequestParam(required = false) String contactNumber,
                                           @RequestParam(required = false) String email) {
