@@ -12,6 +12,8 @@ import com.brinta.hcms.request.updateRequest.UpdatePatientRequest;
 import com.brinta.hcms.service.PatientService;
 import com.brinta.hcms.utility.LoggerUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
