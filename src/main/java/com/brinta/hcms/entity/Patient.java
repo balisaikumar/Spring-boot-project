@@ -1,5 +1,7 @@
 package com.brinta.hcms.entity;
 
+import com.brinta.hcms.enums.PatientRegistrationStatus;
+import com.brinta.hcms.enums.ProfileStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -34,4 +36,13 @@ public class Patient {
     @Column(nullable = false)
     private String address;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "registration_status", nullable = false)
+    private PatientRegistrationStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ProfileStatus profileStatus;
+
 }
+
