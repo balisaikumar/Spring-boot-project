@@ -3,12 +3,9 @@ package com.brinta.hcms.service;
 import com.brinta.hcms.dto.PatientDto;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.Patient;
-import com.brinta.hcms.request.ForgotPasswordRequest;
-import com.brinta.hcms.request.ResetPasswordRequest;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.request.updateRequest.UpdatePatientRequest;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -20,10 +17,6 @@ public interface PatientService {
     Patient registerPatientOffline(RegisterPatientRequest request);  // For ADMIN Registration
 
     TokenPair patientLogin(LoginRequest request);
-
-    void forgotPassword(ForgotPasswordRequest request, HttpServletRequest httpRequest);
-
-    void resetPassword(ResetPasswordRequest request);
 
     Patient update(Long patientId, UpdatePatientRequest updatePatientRequest);
 
