@@ -14,22 +14,17 @@ import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.PatientMapper;
 import com.brinta.hcms.repository.PatientRepository;
 import com.brinta.hcms.repository.UserRepository;
-import com.brinta.hcms.request.ForgotPasswordRequest;
-import com.brinta.hcms.request.ResetPasswordRequest;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.request.updateRequest.UpdatePatientRequest;
-import com.brinta.hcms.service.EmailService;
 import com.brinta.hcms.service.JwtService;
 import com.brinta.hcms.service.PatientService;
 import com.brinta.hcms.utility.LoggerUtil;
 import com.brinta.hcms.utility.SecurityUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -39,12 +34,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-
-import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -71,9 +61,6 @@ public class PatientServiceImpl implements PatientService {
 
     @Autowired
     private SecurityUtil securityUtil;
-
-    @Autowired
-    private EmailService emailService;
 
     private static Authentication getAuthentication1(User userEntity) {
         if (!Roles.PATIENT.name().equalsIgnoreCase(userEntity.getRole().name())) {
@@ -199,87 +186,6 @@ public class PatientServiceImpl implements PatientService {
     }
 
     @Override
-    public void forgotPassword(ForgotPasswordRequest request,
-                               HttpServletRequest httpRequest) {
-        LoggerUtil.info(logger, "Forgot password attempt for email: {}",
-                request.getEmail());
-
-        // Check if user exists by email
-        Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
-        if (optionalUser.isEmpty()) {
-            LoggerUtil.warn(logger, "Forgot password failed: No user found " +
-                    "with email: {}", request.getEmail());
-            throw new ResourceNotFoundException("User not found with email: " +
-                    request.getEmail());
-        }
-
-        User user = optionalUser.get(); //Unwrap the Optional
-
-        // Generate unique token
-        String token = UUID.randomUUID().toString();
-        user.setResetToken(token);
-
-        // Optional: Set token expiry (if you want expiry feature)
-        user.setTokenExpiryDate(LocalDateTime.now().plusMinutes(15));
-
-        userRepository.save(user);
-
-        // Dynamically build base URL (http/https + domain + port)
-        String appUrl = httpRequest.getScheme() + "://" + // http or https
-                httpRequest.getServerName() +     // domain name or localhost
-                ":" + httpRequest.getServerPort(); // port
-
-        String resetLink = appUrl + "/patient/reset-password?token=" + token;
-        String emailContent = "Dear " + user.getUsername() + ",\n\n" +
-                "To reset your password, click the following link:\n" +
-                resetLink + "\n\nThis link will expire in 15 minutes.\n\nRegards," +
-                "\nHealthCare System Team";
-
-        // Send email
-        emailService.sendEmail(user.getEmail(), "Password Reset Request",
-                emailContent);
-
-        LoggerUtil.info(logger, "Password reset token generated and email sent" +
-                " for user: {}", user.getEmail());
-    }
-
-
-    @Override
-    public void resetPassword(ResetPasswordRequest request) {
-        LoggerUtil.info(logger, "Password reset token attempt with token: {}",
-                request.getToken());
-
-        Optional<User> optionalUser = userRepository.findByResetToken(request.getToken());
-        if (optionalUser.isEmpty()) {
-            throw new ResourceNotFoundException("Invalid password reset token");
-        }
-
-        User user = optionalUser.get(); // unwrap Optional
-
-        // Check if token expired
-        if (user.getTokenExpiryDate() != null && user.getTokenExpiryDate()
-                .isBefore(LocalDateTime.now())) {
-            LoggerUtil.warn(logger, "Password reset failed: Token expired " +
-                    "for user: {}", user.getEmail());
-            throw new RuntimeException("Password reset token has expired. " +
-                    "Please request a new one.");
-        }
-
-        // Token valid, proceed to reset
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setResetToken(null); // clear token after use
-
-        // Optional: Clear token expiry date too if you have it
-        user.setTokenExpiryDate(null);
-
-        userRepository.save(user);
-
-        LoggerUtil.info(logger, "Password reset successful for user: {}",
-                user.getEmail());
-
-    }
-
-    @Override
     public Patient update(Long patientId, UpdatePatientRequest updatePatientRequest) {
         Patient patient = patientRepository.findById(patientId).orElseThrow(() -> {
             LoggerUtil.warn(logger, "Update failed: Patient not found with ID:"
@@ -315,36 +221,40 @@ public class PatientServiceImpl implements PatientService {
 
     @Override
     public List<PatientDto> findBy(Long patientId, String contactNumber, String email) {
-        if (patientId == null && (contactNumber == null || contactNumber.isEmpty())
-                && (email == null || email.isEmpty())) {
+
+        if (patientId == null && (contactNumber == null || contactNumber.isEmpty()) &&
+                (email == null || email.isEmpty())) {
+            LoggerUtil.warn(logger, "FindBy failed: No valid input provided.");
             throw new ResourceNotFoundException("Enter Correct Input");
         }
 
-        List<Patient> patients = patientRepository.findByParams(patientId, contactNumber, email);
+        List<Patient> patientList = patientRepository
+                .findByParams(patientId, contactNumber, email);
 
-        if (patients.isEmpty()) {
+        if (patientList == null || patientList.isEmpty()) {
+            LoggerUtil.warn(logger, "FindBy failed: No matching patient found "
+                    + "for ID: {}, contact: {}, email: {}", patientId, contactNumber, email);
             throw new ResourceNotFoundException("No Matching Patient found in Database");
         }
 
-        return patients.stream().map(patientMapper::findBy).toList();
+        LoggerUtil.info(logger, "FindBy successful for {} patient(s).",
+                patientList.size());
+        return patientList.stream().map(patientMapper::findBy).collect(Collectors.toList());
     }
 
-
+    @Override
     public Page<PatientDto> getWithPagination(int page, int size) {
         if (page < 0 || size <= 0) {
-            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
-
+            LoggerUtil.warn(logger, "Pagination failed: Invalid page" +
+                    " index or size.");
+            throw new InvalidRequestException("Page index must not be negative " +
+                    "and size must be greater than zero.");
         }
 
         Pageable pageable = PageRequest.of(page, size);
-         List<Patient> patientsWithUser = patientRepository.findAllWithUser(pageable);
+        Page<Patient> patientPage = patientRepository.findAll(pageable);
 
-        // Convert List<Patient> to Page<PatientDto>
-        List<PatientDto> dtoList = patientsWithUser.stream()
-                .map(patientMapper::toDto)
-                .toList();
-
-        return new PageImpl<>(dtoList, pageable, dtoList.size()); // custom page response
+        return patientPage.map(patientMapper::toDto);
     }
 
     @Override
@@ -375,9 +285,7 @@ public class PatientServiceImpl implements PatientService {
         userRepository.delete(patientToDelete.getUser());
         LoggerUtil.info(logger, "Patient and user deleted successfully" +
                 " for patient ID: {}", patientId);
-
     }
-
 
 }
 

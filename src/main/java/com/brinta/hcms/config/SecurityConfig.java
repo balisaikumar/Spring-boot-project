@@ -59,7 +59,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/admin/login",
+                                "/admin/forgot-password",
+                                "/admin/reset-password",
                                 "/doctor/login",
+                                "/doctor/forgot-password",
+                                "/doctor/reset-password",
                                 "/patient/online-register",
                                 "/patient/login",
                                 "/patient/forgot-password",

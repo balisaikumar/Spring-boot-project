@@ -6,20 +6,26 @@ import com.brinta.hcms.entity.Admin;
 import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
+import com.brinta.hcms.request.ForgotPasswordRequest;
+import com.brinta.hcms.request.ResetPasswordRequest;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterAdminRequest;
 import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.service.AdminService;
 import com.brinta.hcms.service.DoctorService;
+import com.brinta.hcms.service.ForgotPasswordResetService;
+import com.brinta.hcms.utility.LoggerUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,11 +38,16 @@ import java.util.Map;
 @AllArgsConstructor
 public class AdminController {
 
+    private static final Class<?> logger = PatientController.class;
+
     @Autowired
     private AdminService adminService;
 
     @Autowired
     private DoctorService doctorService;
+
+    @Autowired
+    private ForgotPasswordResetService forgotPasswordResetService;
 
     @PostMapping(value = "/register", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('SUPER_ADMIN')")
@@ -73,6 +84,30 @@ public class AdminController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @Operation(summary = "Forgot Password", description = "Send a password reset link to admin email")
+    @ApiResponse(responseCode = "200", description = "Reset link sent to email if user exists")
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
+        LoggerUtil.info(logger, "Forgot password API called for email: {}", request.getEmail());
+        forgotPasswordResetService.forgotPassword(request, httpRequest);
+        return ResponseEntity.ok("Password reset link sent to your registered email.");
+    }
+
+    @GetMapping("/reset-password")
+    public ResponseEntity<String> validateResetToken(@RequestParam("token") String token) {
+        String result = forgotPasswordResetService.validateResetToken(token);
+        return result.equals("Token is valid.") ? ResponseEntity.ok(result) : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+    }
+
+    @Operation(summary = "Reset Password", description = "Reset admin password using the token received via email")
+    @ApiResponse(responseCode = "200", description = "Password reset successful")
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        LoggerUtil.info(logger, "Reset password API called with token: {}", request.getToken());
+        forgotPasswordResetService.resetPassword(request);
+        return ResponseEntity.ok("Password reset successful.");
     }
 
     @PostMapping(value = "/doctor/register", produces = MediaType.APPLICATION_JSON_VALUE)

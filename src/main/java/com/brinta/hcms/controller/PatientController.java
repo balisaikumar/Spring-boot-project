@@ -9,6 +9,7 @@ import com.brinta.hcms.request.ResetPasswordRequest;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterPatientRequest;
 import com.brinta.hcms.request.updateRequest.UpdatePatientRequest;
+import com.brinta.hcms.service.ForgotPasswordResetService;
 import com.brinta.hcms.service.PatientService;
 import com.brinta.hcms.utility.LoggerUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +20,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,6 +38,9 @@ public class PatientController {
 
     @Autowired
     private PatientService patientService;
+
+    @Autowired
+    private ForgotPasswordResetService forgotPasswordResetService;
 
     @PostMapping(value = "/online-register", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> registerOnline(@RequestBody RegisterPatientRequest request) {
@@ -87,8 +92,14 @@ public class PatientController {
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
                                                  HttpServletRequest httpRequest) {
         LoggerUtil.info(logger, "Forgot password API called for email: {}", request.getEmail());
-        patientService.forgotPassword(request, httpRequest);
+        forgotPasswordResetService.forgotPassword(request, httpRequest);
         return ResponseEntity.ok("Password reset link sent to your registered email.");
+    }
+
+    @GetMapping("/reset-password")
+    public ResponseEntity<String> validateResetToken(@RequestParam("token") String token) {
+        String result = forgotPasswordResetService.validateResetToken(token);
+        return result.equals("Token is valid.") ? ResponseEntity.ok(result) : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
     }
 
     @Operation(summary = "Reset Password", description = "Reset patient's password using the token received via email")
@@ -96,7 +107,7 @@ public class PatientController {
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         LoggerUtil.info(logger, "Reset password API called with token: {}", request.getToken());
-        patientService.resetPassword(request);
+        forgotPasswordResetService.resetPassword(request);
         return ResponseEntity.ok("Password reset successful.");
     }
 
