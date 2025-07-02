@@ -23,6 +23,7 @@ import com.brinta.hcms.utility.LoggerUtil;
 import com.brinta.hcms.utility.SecurityUtil;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -38,11 +39,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @AllArgsConstructor
 @Transactional
 public class PatientServiceImpl implements PatientService {
-
-    private static final Class<?> logger = PatientServiceImpl.class;
 
     @Autowired
     private UserRepository userRepository;
@@ -67,22 +67,19 @@ public class PatientServiceImpl implements PatientService {
             throw new RuntimeException("Access denied: Not a patient account");
         }
 
-        List<GrantedAuthority> authorities = List
-                .of(new SimpleGrantedAuthority("ROLE_PATIENT"));
+        List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_PATIENT"));
 
         org.springframework.security.core.userdetails.User userDetails = new org
                 .springframework.security.core.userdetails
                 .User(userEntity.getEmail(), userEntity.getPassword(), authorities);
 
-        return new UsernamePasswordAuthenticationToken(userDetails, null,
-                authorities);
+        return new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
     }
 
     @Override
     public Patient registerPatientOnline(RegisterPatientRequest request) {
-        LoggerUtil.info(logger,
-                "Attempting online registration for patient email:" + " {}",
-                request.getEmail());
+        log.info("Attempting online registration for patient email: {}",
+                LoggerUtil.mask(request.getEmail()));
 
         validateEmailAndContact(request);
 
@@ -101,17 +98,15 @@ public class PatientServiceImpl implements PatientService {
         user.setPatient(patient);
 
         userRepository.save(user);
-        LoggerUtil.info(logger,
-                "Online patient registration successful for email: " + "{}",
-                request.getEmail());
+        log.info("Online patient registration successful for email: {}",
+                LoggerUtil.mask(request.getEmail()));
         return patient;
     }
 
     @Override
     public Patient registerPatientOffline(RegisterPatientRequest request) {
-        LoggerUtil.info(logger,
-                "Admin attempting offline registration for" + "patient email: {}",
-                request.getEmail());
+        log.info("Admin attempting offline registration for patient email: {}",
+                LoggerUtil.mask(request.getEmail()));
 
         validateEmailAndContact(request);
 
@@ -130,57 +125,49 @@ public class PatientServiceImpl implements PatientService {
         user.setPatient(patient);
 
         userRepository.save(user);
-        LoggerUtil.info(logger, "Offline patient registration successful " +
-                "for email: {}", request.getEmail());
+        log.info("Offline patient registration successful for email: {}",
+                LoggerUtil.mask(request.getEmail()));
         return patient;
     }
 
     private void validateEmailAndContact(RegisterPatientRequest request) {
         boolean emailExists = patientRepository.existsByEmail(request.getEmail());
-        boolean contactExists = patientRepository
-                .existsByPatientContactNumber(request.getContactNumber());
+        boolean contactExists = patientRepository.existsByPatientContactNumber(request.getContactNumber());
 
         if (emailExists || contactExists) {
             StringBuilder errorMessage = new StringBuilder("Already Exists: ");
-            if (emailExists) errorMessage.append("Email: ").append(request.getEmail());
+            if (emailExists) errorMessage.append("Email: ").append(LoggerUtil.mask(request.getEmail()));
             if (emailExists && contactExists) errorMessage.append(" | ");
-            if (contactExists) errorMessage.append("Contact: ")
-                    .append(request.getContactNumber());
+            if (contactExists) errorMessage.append("Contact: ").append(LoggerUtil.mask(request.getContactNumber()));
 
-            LoggerUtil.warn(logger, "Registration failed due to duplication: " +
-                    "{}", errorMessage);
+            log.warn("Registration failed due to duplication: {}", errorMessage);
             throw new EmailAlreadyExistsException(errorMessage.toString());
         }
     }
 
     @Override
     public TokenPair patientLogin(LoginRequest request) {
-        LoggerUtil.info(logger, "Patient login attempt for email: {}",
-                request.getEmail());
+        log.info("Patient login attempt for email: {}", LoggerUtil.mask(request.getEmail()));
 
         if (request.getEmail() == null || request.getPassword() == null) {
-            LoggerUtil.warn(logger, "Login failed: Missing email or password.");
+            log.warn("Login failed: Missing email or password.");
             throw new InvalidRequestException("Email and password must be provided");
         }
 
         User userEntity = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> {
-            LoggerUtil.warn(logger, "Login failed: No user found with email: {}",
-                    request.getEmail());
-            return new RuntimeException("User not found with email: " +
-                    request.getEmail());
-        });
+                    log.warn("Login failed: No user found with email: {}", LoggerUtil.mask(request.getEmail()));
+                    return new RuntimeException("User not found with email: " + request.getEmail());
+                });
 
         if (!passwordEncoder.matches(request.getPassword(), userEntity.getPassword())) {
-            LoggerUtil.warn(logger, "Login failed: Invalid password for email:"
-                    + " {}", request.getEmail());
+            log.warn("Login failed: Invalid password for email: {}", LoggerUtil.mask(request.getEmail()));
             throw new RuntimeException("Invalid password");
         }
 
         Authentication authentication = getAuthentication1(userEntity);
 
-        LoggerUtil.info(logger, "Patient login successful for email: {}",
-                request.getEmail());
+        log.info("Patient login successful for email: {}", LoggerUtil.mask(request.getEmail()));
 
         return jwtService.generateTokenPair(authentication);
     }
@@ -188,34 +175,27 @@ public class PatientServiceImpl implements PatientService {
     @Override
     public Patient update(Long patientId, UpdatePatientRequest updatePatientRequest) {
         Patient patient = patientRepository.findById(patientId).orElseThrow(() -> {
-            LoggerUtil.warn(logger, "Update failed: Patient not found with ID:"
-                    + " {}", patientId);
-            return new ResourceNotFoundException("The entered ID is not valid "
-                    + "in the Database");
+            log.warn("Update failed: Patient not found with ID: {}", patientId);
+            return new ResourceNotFoundException("The entered ID is not valid in the Database");
         });
 
         User currentUser = securityUtil.getCurrentUser();
 
         if (!patient.getUser().getId().equals(currentUser.getId())) {
-            LoggerUtil.warn(logger, "Unauthorized update attempt by user ID:"
-                    + " {} for patient ID: {}", currentUser.getId(), patientId);
-            throw new UnAuthException("You are not authorized to update"
-                    + " this patient's details.");
+            log.warn("Unauthorized update attempt by user ID: {} for patient ID: {}", currentUser.getId(), patientId);
+            throw new UnAuthException("You are not authorized to update this patient's details.");
         }
 
         patientMapper.update(updatePatientRequest, patient);
 
         User user = patient.getUser();
         if (user != null) {
-            if (updatePatientRequest.getName() != null)
-                user.setName(updatePatientRequest.getName());
-            if (updatePatientRequest.getEmail() != null)
-                user.setEmail(updatePatientRequest.getEmail());
+            if (updatePatientRequest.getName() != null) user.setName(updatePatientRequest.getName());
+            if (updatePatientRequest.getEmail() != null) user.setEmail(updatePatientRequest.getEmail());
             userRepository.save(user);
         }
 
-        LoggerUtil.info(logger, "Patient update successful for patient ID: {}",
-                patientId);
+        log.info("Patient update successful for patient ID: {}", patientId);
         return patientRepository.save(patient);
     }
 
@@ -224,31 +204,27 @@ public class PatientServiceImpl implements PatientService {
 
         if (patientId == null && (contactNumber == null || contactNumber.isEmpty()) &&
                 (email == null || email.isEmpty())) {
-            LoggerUtil.warn(logger, "FindBy failed: No valid input provided.");
+            log.warn("FindBy failed: No valid input provided.");
             throw new ResourceNotFoundException("Enter Correct Input");
         }
 
-        List<Patient> patientList = patientRepository
-                .findByParams(patientId, contactNumber, email);
+        List<Patient> patientList = patientRepository.findByParams(patientId, contactNumber, email);
 
         if (patientList == null || patientList.isEmpty()) {
-            LoggerUtil.warn(logger, "FindBy failed: No matching patient found "
-                    + "for ID: {}, contact: {}, email: {}", patientId, contactNumber, email);
+            log.warn("FindBy failed: No matching patient found for ID: {}, contact: {}, email: {}",
+                    patientId, LoggerUtil.mask(contactNumber), LoggerUtil.mask(email));
             throw new ResourceNotFoundException("No Matching Patient found in Database");
         }
 
-        LoggerUtil.info(logger, "FindBy successful for {} patient(s).",
-                patientList.size());
+        log.info("FindBy successful for {} patient(s).", patientList.size());
         return patientList.stream().map(patientMapper::findBy).collect(Collectors.toList());
     }
 
     @Override
     public Page<PatientDto> getWithPagination(int page, int size) {
         if (page < 0 || size <= 0) {
-            LoggerUtil.warn(logger, "Pagination failed: Invalid page" +
-                    " index or size.");
-            throw new InvalidRequestException("Page index must not be negative " +
-                    "and size must be greater than zero.");
+            log.warn("Pagination failed: Invalid page index or size.");
+            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
         }
 
         Pageable pageable = PageRequest.of(page, size);
@@ -263,29 +239,23 @@ public class PatientServiceImpl implements PatientService {
 
         Patient patientToDelete = patientRepository.findById(patientId)
                 .orElseThrow(() -> {
-            LoggerUtil.warn(logger, "Delete failed: Patient not found " +
-                    "with ID:" + " {}", patientId);
-            return new ResourceNotFoundException("Patient not found");
-        });
+                    log.warn("Delete failed: Patient not found with ID: {}", patientId);
+                    return new ResourceNotFoundException("Patient not found");
+                });
 
         if (currentUser.getRole().equals(Roles.PATIENT)) {
             if (!patientToDelete.getUser().getId().equals(currentUser.getId())) {
-                LoggerUtil.warn(logger, "Unauthorized delete attempt by user ID:"
-                        + " {} for patient ID: {}", currentUser.getId(), patientId);
-                throw new UnAuthException("You are not authorized to delete " +
-                        "this patient profile.");
+                log.warn("Unauthorized delete attempt by user ID: {} for patient ID: {}", currentUser.getId(), patientId);
+                throw new UnAuthException("You are not authorized to delete this patient profile.");
             }
         } else if (!currentUser.getRole().equals(Roles.ADMIN)) {
-            LoggerUtil.warn(logger, "Unauthorized role attempt for delete" +
-                    " by user ID: {}", currentUser.getId());
+            log.warn("Unauthorized role attempt for delete by user ID: {}", currentUser.getId());
             throw new UnAuthException("Only patient or admin can delete the profile.");
         }
 
         patientRepository.delete(patientToDelete);
         userRepository.delete(patientToDelete.getUser());
-        LoggerUtil.info(logger, "Patient and user deleted successfully" +
-                " for patient ID: {}", patientId);
+        log.info("Patient and user deleted successfully for patient ID: {}", patientId);
     }
-
 }
 
