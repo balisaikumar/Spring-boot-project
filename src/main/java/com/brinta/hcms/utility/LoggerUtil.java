@@ -1,68 +1,20 @@
 package com.brinta.hcms.utility;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
-
-/**
- * Centralized Logger Utility used throughout the application.
- * Helps in adding traceId/requestId or any context fields (MDC) automatically.
- */
 public final class LoggerUtil {
 
-    private LoggerUtil() {
-        // Prevent instantiation
-    }
+    // Masking for email and phone numbers
+    public static String mask(String input) {
+        if (input == null || input.isEmpty()) return "***";
 
-    /**
-     * Returns SLF4J Logger instance for the given class.
-     */
-    public static Logger getLogger(Class<?> clazz) {
-        return LoggerFactory.getLogger(clazz);
-    }
-
-    // ---------------- INFO ----------------
-    public static void info(Class<?> clazz, String message, Object... args) {
-        getLogger(clazz).info(buildMessage(message), args);
-    }
-
-    // ---------------- DEBUG ----------------
-    public static void debug(Class<?> clazz, String message, Object... args) {
-        getLogger(clazz).debug(buildMessage(message), args);
-    }
-
-    // ---------------- WARN ----------------
-    public static void warn(Class<?> clazz, String message, Object... args) {
-        getLogger(clazz).warn(buildMessage(message), args);
-    }
-
-    // ---------------- ERROR ----------------
-    public static void error(Class<?> clazz, String message, Object... args) {
-        getLogger(clazz).error(buildMessage(message), args);
-    }
-
-    public static void error(Class<?> clazz, String message, Throwable throwable) {
-        getLogger(clazz).error(buildMessage(message), throwable);
-    }
-
-    // ---------------- MDC Message Enhancer ----------------
-    private static String buildMessage(String message) {
-        StringBuilder builder = new StringBuilder();
-
-        // Add requestId if available
-        String requestId = MDC.get("requestId");
-        if (requestId != null) {
-            builder.append("[requestId=").append(requestId).append("] ");
+        if (input.contains("@")) {
+            String[] parts = input.split("@");
+            String namePart = parts[0];
+            return (namePart.length() > 2 ? namePart.substring(0, 2) : "*") + "***@" + parts[1];
+        } else if (input.matches("\\d{10}")) {
+            return input.substring(0, 2) + "****" + input.substring(6);
         }
 
-        // Add userId if available
-        String userId = MDC.get("userId");
-        if (userId != null) {
-            builder.append("[userId=").append(userId).append("] ");
-        }
-
-        builder.append(message);
-        return builder.toString();
+        return "***";
     }
 
 }

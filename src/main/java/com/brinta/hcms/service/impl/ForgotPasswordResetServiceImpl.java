@@ -7,8 +7,8 @@ import com.brinta.hcms.request.ForgotPasswordRequest;
 import com.brinta.hcms.request.ResetPasswordRequest;
 import com.brinta.hcms.service.EmailService;
 import com.brinta.hcms.service.ForgotPasswordResetService;
-import com.brinta.hcms.utility.LoggerUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,9 +18,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class ForgotPasswordResetServiceImpl implements ForgotPasswordResetService {
-
-    private static final Class<?> logger = ForgotPasswordResetServiceImpl.class;
 
     @Autowired
     private UserRepository userRepository;
@@ -33,12 +32,12 @@ public class ForgotPasswordResetServiceImpl implements ForgotPasswordResetServic
 
     @Override
     public void forgotPassword(ForgotPasswordRequest request, HttpServletRequest httpRequest) {
-        LoggerUtil.info(logger, "Forgot password attempt for email: {}",
+        log.info("Forgot password attempt for email: {}",
                 request.getEmail());
 
         Optional<User> optionalUser = userRepository.findByEmail(request.getEmail());
         if (optionalUser.isEmpty()) {
-            LoggerUtil.warn(logger, "User not found with email: {}",
+            log.warn( "User not found with email: {}",
                     request.getEmail());
             throw new ResourceNotFoundException("User not found with email: " +
                     request.getEmail());
@@ -69,42 +68,42 @@ public class ForgotPasswordResetServiceImpl implements ForgotPasswordResetServic
         emailService.sendEmail(user.getEmail(), "Password Reset Request",
                 emailContent);
 
-        LoggerUtil.info(logger, "Reset password email sent to: {}",
+        log.info("Reset password email sent to: {}",
                 user.getEmail());
     }
 
     @Override
     public String validateResetToken(String token) {
-        LoggerUtil.info(logger, "Validating reset token: {}", token);
+        log.info("Validating reset token: {}", token);
 
         Optional<User> optionalUser = userRepository.findByResetToken(token);
         if (optionalUser.isEmpty()) {
-            LoggerUtil.warn(logger, "Invalid reset token: {}", token);
+            log.warn("Invalid reset token: {}", token);
             return "Invalid token.";
         }
 
         User user = optionalUser.get();
         if (user.getTokenExpiryDate() != null && user.getTokenExpiryDate()
                 .isBefore(LocalDateTime.now())) {
-            LoggerUtil.warn(logger, "Expired reset token for user: {}",
+            log.warn("Expired reset token for user: {}",
                     user.getEmail());
             return "Token expired.";
         }
 
-        LoggerUtil.info(logger, "Reset token is valid for user: {}",
+        log.info("Reset token is valid for user: {}",
                 user.getEmail());
         return "Token is valid.";
     }
 
     @Override
     public void resetPassword(ResetPasswordRequest request) {
-        LoggerUtil.info(logger, "Reset password request received with token:" +
+        log.info("Reset password request received with token:" +
                 " {}", request.getToken());
 
         Optional<User> optionalUser = userRepository
                 .findByResetToken(request.getToken());
         if (optionalUser.isEmpty()) {
-            LoggerUtil.warn(logger, "Reset failed: Invalid token: {}",
+            log.warn("Reset failed: Invalid token: {}",
                     request.getToken());
             throw new ResourceNotFoundException("Invalid password reset token");
         }
@@ -113,7 +112,7 @@ public class ForgotPasswordResetServiceImpl implements ForgotPasswordResetServic
 
         if (user.getTokenExpiryDate() != null && user.getTokenExpiryDate()
                 .isBefore(LocalDateTime.now())) {
-            LoggerUtil.warn(logger, "Reset failed: Token expired for user: {}",
+            log.warn("Reset failed: Token expired for user: {}",
                     user.getEmail());
             throw new RuntimeException("Token has expired. Request a new one.");
         }
@@ -123,7 +122,7 @@ public class ForgotPasswordResetServiceImpl implements ForgotPasswordResetServic
         user.setTokenExpiryDate(null);
         userRepository.save(user);
 
-        LoggerUtil.info(logger, "Password reset successful for user: {}",
+        log.info("Password reset successful for user: {}",
                 user.getEmail());
     }
 

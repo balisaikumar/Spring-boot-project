@@ -18,7 +18,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,12 +31,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/patient")
-@RequiredArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
 public class PatientController {
-
-    private static final Class<?> logger = PatientController.class;
 
     @Autowired
     private PatientService patientService;
@@ -44,17 +46,15 @@ public class PatientController {
 
     @PostMapping(value = "/online-register", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> registerOnline(@RequestBody RegisterPatientRequest request) {
-        LoggerUtil.info(logger, "Online registration attempt for email: {}",
-                request.getEmail());
+        log.info("Online registration attempt for email: {}", LoggerUtil.mask(request.getEmail()));
+
         try {
             Patient patient = patientService.registerPatientOnline(request);
-            LoggerUtil.info(logger, "Online registration successful for email:" +
-                    " {}", request.getEmail());
+            log.info("Online registration successful for email: {}", LoggerUtil.mask(request.getEmail()));
             return ResponseEntity.status(201).body(Map.of("message",
                     "Online patient registered successfully!", "patient", patient));
         } catch (Exception ex) {
-            LoggerUtil.error(logger, "Online registration failed for email: {} " +
-                    "with error: {}", request.getEmail(), ex.getMessage());
+            log.error("Online registration failed for email: {} with error: {}", LoggerUtil.mask(request.getEmail()), ex.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));
         }
     }
@@ -62,27 +62,25 @@ public class PatientController {
     @PostMapping(value = "/offline-register", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> registerOffline(@RequestBody RegisterPatientRequest request) {
-        LoggerUtil.info(logger, "Offline registration attempt by ADMIN for email: " +
-                "{}", request.getEmail());
+        log.info("Offline registration attempt by ADMIN for email: {}", LoggerUtil.mask(request.getEmail()));
+
         try {
             Patient patient = patientService.registerPatientOffline(request);
-            LoggerUtil.info(logger, "Offline registration successful for email:" +
-                    " {}", request.getEmail());
+            log.info("Offline registration successful for email: {}", LoggerUtil.mask(request.getEmail()));
             return ResponseEntity.status(201).body(Map.of("message",
                     "Offline patient registered successfully by Admin!",
                     "patient", patient));
         } catch (Exception ex) {
-            LoggerUtil.error(logger, "Offline registration failed for email: " +
-                    "{} with error: {}", request.getEmail(), ex.getMessage());
+            log.error("Offline registration failed for email: {} with error: {}", LoggerUtil.mask(request.getEmail()), ex.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));
         }
     }
 
     @PostMapping("/login")
     public ResponseEntity<TokenPair> loginPatient(@Valid @RequestBody LoginRequest request) {
-        LoggerUtil.info(logger, "Login attempt for email: {}", request.getEmail());
+        log.info("Login attempt for email: {}", LoggerUtil.mask(request.getEmail()));
         TokenPair tokenPair = patientService.patientLogin(request);
-        LoggerUtil.info(logger, "Login successful for email: {}", request.getEmail());
+        log.info("Login successful for email: {}", LoggerUtil.mask(request.getEmail()));
         return ResponseEntity.ok(tokenPair);
     }
 
@@ -91,7 +89,7 @@ public class PatientController {
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
                                                  HttpServletRequest httpRequest) {
-        LoggerUtil.info(logger, "Forgot password API called for email: {}", request.getEmail());
+        log.info("Forgot password API called for email: {}", LoggerUtil.mask(request.getEmail()));
         forgotPasswordResetService.forgotPassword(request, httpRequest);
         return ResponseEntity.ok("Password reset link sent to your registered email.");
     }
@@ -106,7 +104,7 @@ public class PatientController {
     @ApiResponse(responseCode = "200", description = "Password reset successful")
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        LoggerUtil.info(logger, "Reset password API called with token: {}", request.getToken());
+        log.info( "Reset password API called with token: {}", request.getToken());
         forgotPasswordResetService.resetPassword(request);
         return ResponseEntity.ok("Password reset successful.");
     }
@@ -115,14 +113,14 @@ public class PatientController {
     @PreAuthorize("hasRole('PATIENT')")
     public ResponseEntity<?> updatePatient(@PathVariable Long id, @Valid @RequestBody
     UpdatePatientRequest updatePatientRequest) {
-        LoggerUtil.info(logger, "Update attempt for patient ID: {}", id);
+        log.info( "Update attempt for patient ID: {}", id);
         try {
             Patient updatedPatient = patientService.update(id, updatePatientRequest);
-            LoggerUtil.info(logger, "Update successful for patient ID: {}", id);
+            log.info( "Update successful for patient ID: {}", id);
             return ResponseEntity.ok(Map.of("message", "Patient updated successfully!",
                     "patient", updatedPatient));
         } catch (ResourceNotFoundException exception) {
-            LoggerUtil.error(logger, "Update failed: {}", exception.getMessage());
+            log.error("Update failed: {}", exception.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", exception.getMessage()));
         }
     }
@@ -146,10 +144,10 @@ public class PatientController {
             List<PatientDto> patient = patientService.findBy(patientId, contactNumber, email);
             return ResponseEntity.ok(patient);
         } catch (ResourceNotFoundException ex) {
-            LoggerUtil.error(logger, "FindBy failed: {}", ex.getMessage());
+            log.error( "FindBy failed: {}", ex.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
         } catch (Exception ex) {
-            LoggerUtil.error(logger, "Unexpected error occurred: {}", ex.getMessage());
+           log.error( "Unexpected error occurred: {}", ex.getMessage());
             return ResponseEntity.status(500).body(Map.of("error",
                     "Something went wrong"));
         }
@@ -170,14 +168,14 @@ public class PatientController {
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deletePatientById(@PathVariable("id") Long patientId) {
-        LoggerUtil.info(logger, "Delete attempt for patient ID: {}", patientId);
+        log.info("Delete attempt for patient ID: {}", patientId);
         try {
             patientService.delete(patientId);
-            LoggerUtil.info(logger, "Deletion successful for patient ID: {}",
+           log.info( "Deletion successful for patient ID: {}",
                     patientId);
             return ResponseEntity.ok(Map.of("message", "Patient Deleted successfully!"));
         } catch (ResourceNotFoundException exception) {
-            LoggerUtil.error(logger, "Delete failed: {}", exception.getMessage());
+            log.error( "Delete failed: {}", exception.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", exception.getMessage()));
         }
     }
