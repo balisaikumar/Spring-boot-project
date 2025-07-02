@@ -4,13 +4,6 @@ spring:
     username: dev
     password: Root@123
     driver-class-name: com.mysql.cj.jdbc.Driver
-server:
-  port: 443
-  ssl:
-    key-store-type: PKCS12
-    key-store: /home/ec2-user/keystore.p12
-    key-store-password: changeit
-    key-alias: tomcat
 
 logging:
   config: classpath:logback-dev.xml 
