@@ -1,0 +1,18 @@
+name: Stop EC2 Instance at 8 PM
+
+on:
+  schedule:
+    - cron: '30 14 * * *'  # 8 PM IST (India is UTC+5:30)
+
+jobs:
+  stop-ec2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop EC2 instance
+        uses: aws-actions/aws-cli-action@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          inline-script: |
+            aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
