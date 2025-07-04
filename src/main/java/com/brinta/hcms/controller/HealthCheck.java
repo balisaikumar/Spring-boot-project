@@ -17,4 +17,6 @@ public class HealthCheck {
         logger.info("Health check endpoint called");
         return "OK";
     }
+
 }
+

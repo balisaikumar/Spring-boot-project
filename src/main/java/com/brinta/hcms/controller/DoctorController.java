@@ -227,14 +227,16 @@ public class DoctorController {
     @Operation(summary = "List appointments for the doctor", responses = {
             @ApiResponse(responseCode = "200", description = "Appointments fetched successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Appointments not found", content = @Content)
+            @ApiResponse(responseCode = "404", description = "Appointments not found",
+                    content = @Content)
     })
     public ResponseEntity<?> listAppointments(@RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "10") int size) {
         log.info("Doctor is requesting appointment list - Page: {}, Size: {}", page, size);
         try {
             Page<DoctorAppointmentDto> appointments = doctorService.listAppointments(page, size);
-            log.info("Found {} appointments on page {}", appointments.getNumberOfElements(), appointments.getNumber());
+            log.info("Found {} appointments on page {}", appointments.getNumberOfElements(),
+                    appointments.getNumber());
             return ResponseEntity.ok(Map.of(
                     "message", "Appointments fetched successfully",
                     "appointments", appointments.getContent(),
@@ -252,13 +254,17 @@ public class DoctorController {
     @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Reschedule a doctor appointment", responses = {
             @ApiResponse(responseCode = "200", description = "Appointment rescheduled successfully"),
-            @ApiResponse(responseCode = "404", description = "Appointment not found", content = @Content)
+            @ApiResponse(responseCode = "404", description = "Appointment not found",
+                    content = @Content)
     })
     public ResponseEntity<?> rescheduleAppointment(@PathVariable Long id,
-                                                   @Valid @RequestBody RescheduleAppointmentRequest request) {
-        log.info("Reschedule request for appointment ID: {} to time: {}", id, request.getNewAppointmentTime());
+                                                   @Valid @RequestBody
+                                                   RescheduleAppointmentRequest request) {
+        log.info("Reschedule request for appointment ID: {} to time: {}", id,
+                request.getNewAppointmentTime());
         try {
-            DoctorAppointmentDto updated = doctorService.rescheduleAppointment(id, request.getNewAppointmentTime());
+            DoctorAppointmentDto updated = doctorService.rescheduleAppointment(id,
+                    request.getNewAppointmentTime());
             log.info("Appointment ID: {} rescheduled successfully", id);
             return ResponseEntity.ok(Map.of(
                     "message", "Appointment rescheduled successfully",
@@ -274,14 +280,16 @@ public class DoctorController {
     @PreAuthorize("hasRole('DOCTOR')")
     @Operation(summary = "Cancel a doctor appointment", responses = {
             @ApiResponse(responseCode = "200", description = "Appointment cancelled successfully"),
-            @ApiResponse(responseCode = "404", description = "Appointment not found", content = @Content)
+            @ApiResponse(responseCode = "404", description = "Appointment not found",
+                    content = @Content)
     })
     public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
         log.info("Cancel appointment request received for ID: {}", id);
         try {
             doctorService.cancelAppointment(id);
             log.info("Appointment ID: {} cancelled successfully", id);
-            return ResponseEntity.ok(Map.of("message", "Appointment cancelled successfully"));
+            return ResponseEntity
+                    .ok(Map.of("message", "Appointment cancelled successfully"));
         } catch (RuntimeException e) {
             log.warn("Failed to cancel appointment ID: {} - Reason: {}", id, e.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));

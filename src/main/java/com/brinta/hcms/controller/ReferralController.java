@@ -106,7 +106,8 @@ public class ReferralController {
             summary = "Get current agent's referrals",
             description = "Fetches all referrals made by the currently logged-in agent",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Referrals retrieved successfully"),
+                    @ApiResponse(responseCode = "200",
+                            description = "Referrals retrieved successfully"),
                     @ApiResponse(responseCode = "401", description = "Unauthorized access")
             }
     )

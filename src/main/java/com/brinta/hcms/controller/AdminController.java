@@ -57,11 +57,13 @@ public class AdminController {
                     content = @Content(schema = @Schema(implementation = Admin.class))),
             @ApiResponse(description = "Email or contact already exists", responseCode = "400")
     })
-    public ResponseEntity<?> registerAdmin(@Valid @RequestBody RegisterAdminRequest registerAdminRequest) {
+    public ResponseEntity<?> registerAdmin(@Valid @RequestBody
+                                               RegisterAdminRequest registerAdminRequest) {
         String maskedEmail = LoggerUtil.mask(registerAdminRequest.getEmail());
         String maskedContact = LoggerUtil.mask(registerAdminRequest.getContactNumber());
 
-        log.info( "Received request to register admin with email={}, contact={}", maskedEmail, maskedContact);
+        log.info( "Received request to register admin with email={}, contact={}",
+                maskedEmail, maskedContact);
 
         try {
             Admin admin = adminService.registerAdmin(registerAdminRequest);
@@ -101,10 +103,13 @@ public class AdminController {
         }
     }
 
-    @Operation(summary = "Forgot Password", description = "Send a password reset link to admin email")
-    @ApiResponse(responseCode = "200", description = "Reset link sent to email if user exists")
+    @Operation(summary = "Forgot Password",
+            description = "Send a password reset link to admin email")
+    @ApiResponse(responseCode = "200",
+            description = "Reset link sent to email if user exists")
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                                                 HttpServletRequest httpRequest) {
         log.info( "Forgot password API called for email: {}", request.getEmail());
         forgotPasswordResetService.forgotPassword(request, httpRequest);
         return ResponseEntity.ok("Password reset link sent to your registered email.");
@@ -113,10 +118,13 @@ public class AdminController {
     @GetMapping("/reset-password")
     public ResponseEntity<String> validateResetToken(@RequestParam("token") String token) {
         String result = forgotPasswordResetService.validateResetToken(token);
-        return result.equals("Token is valid.") ? ResponseEntity.ok(result) : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        return result.equals("Token is valid.")
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
     }
 
-    @Operation(summary = "Reset Password", description = "Reset admin password using the token received via email")
+    @Operation(summary = "Reset Password",
+            description = "Reset admin password using the token received via email")
     @ApiResponse(responseCode = "200", description = "Password reset successful")
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
@@ -158,7 +166,8 @@ public class AdminController {
     @PostMapping(value = "/register/external", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Register External Doctor", responses = {
-            @ApiResponse(description = "Added external doctor in the database", responseCode = "201",
+            @ApiResponse(description = "Added external doctor in the database",
+                    responseCode = "201",
                     content = @Content(schema = @Schema(implementation = Doctor.class))),
             @ApiResponse(description = "Agent type or email already exists", responseCode = "400"),
             @ApiResponse(description = "Unexpected server error", responseCode = "500")
@@ -219,7 +228,8 @@ public class AdminController {
             return ResponseEntity.noContent().build();
         }
         log.info("Fetched {} admin records: page={}, totalPages={}, totalElements={}",
-                admins.getNumberOfElements(), page, admins.getTotalPages(), admins.getTotalElements());
+                admins.getNumberOfElements(), page, admins.getTotalPages(),
+                admins.getTotalElements());
 
         return ResponseEntity.ok(Map.of(
                 "admins", admins.getContent(),
