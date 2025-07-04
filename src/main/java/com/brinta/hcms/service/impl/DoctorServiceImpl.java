@@ -26,9 +26,11 @@ import com.brinta.hcms.service.DoctorService;
 import com.brinta.hcms.service.JwtService;
 import com.brinta.hcms.utility.LoggerUtil;
 import com.brinta.hcms.utility.ReferralCodeGenerator;
+
 import com.brinta.hcms.utility.SecurityUtil;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -46,6 +48,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @Transactional
 @AllArgsConstructor
 public class DoctorServiceImpl implements DoctorService {
@@ -99,7 +102,6 @@ public class DoctorServiceImpl implements DoctorService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Roles.DOCTOR);
         userRepository.save(user);
-
         LoggerUtil.debug(getClass(),
                 "Internal doctor user created: {}", request.getEmail());
 
@@ -107,7 +109,6 @@ public class DoctorServiceImpl implements DoctorService {
         Doctor doctor = doctorMapper.register(request);
         doctor.setUser(user);
         doctor.setReferralCode(null); // Internal doctor doesn’t need referral code
-
         LoggerUtil.info(getClass(), "Internal doctor saved successfully: {}",
                 doctor.getEmail());
         return doctorRepository.save(doctor);
@@ -256,6 +257,7 @@ public class DoctorServiceImpl implements DoctorService {
         LoggerUtil.error(getClass(), "Doctor login failed for email: {}",
                 request.getEmail());
         throw new ResourceNotFoundException("Doctor not found or invalid credentials");
+
     }
 
     @Override
@@ -325,56 +327,74 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public List<DoctorDto> findBy(Long doctorId, String contactNumber, String email) {
+        String maskedContact = LoggerUtil.mask(contactNumber);
+        String maskedEmail = LoggerUtil.mask(email);
 
-        //Check Null Input Values
-        if (doctorId == null && (contactNumber == null || contactNumber.isEmpty())
-                && (email == null || email.isEmpty())) {
+        log.info("Doctor search attempt with doctorId={}, contact={}, email={}",
+                doctorId, maskedContact, maskedEmail);
+
+        if (doctorId == null &&
+                (contactNumber == null || contactNumber.isEmpty()) &&
+                (email == null || email.isEmpty())) {
+            log.warn("Doctor search failed: all input fields are empty or null");
             throw new ResourceNotFoundException("Enter Correct Input");
         }
 
-        Optional<Doctor> doctor =
-                doctorRepository.findByIdOrContactNumberOrEmail(doctorId, contactNumber, email);
+        Optional<Doctor> doctor = doctorRepository.findByIdOrContactNumberOrEmail(doctorId, contactNumber, email);
 
         if (doctor.isEmpty()) {
+            log.warn("Doctor search failed: no match found for doctorId={}, contact={}, email={}",
+                    doctorId, maskedContact, maskedEmail);
             throw new ResourceNotFoundException("No Matching Doctor found in Database");
         }
 
-        return doctor.stream().map(doctorMapper::findBy).collect(Collectors.toList());
+        log.info("Doctor found successfully for search: doctorId={}, contact={}, email={}",
+                doctorId, maskedContact, maskedEmail);
 
+        return doctor.stream()
+                .map(doctorMapper::findBy)
+                .collect(Collectors.toList());
     }
 
     @Override
     public Page<DoctorDto> getWithPagination(int page, int size) {
+        log.info("Pagination request: page={}, size={}", page, size);
 
         if (page < 0 || size <= 0) {
-            throw new
-                    InvalidRequestException("Page index must not be negative and size " +
-                    "must be greater than zero.");
+            log.warn("Invalid pagination parameters: page={}, size={}", page, size);
+            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
         }
 
         Pageable pageable = PageRequest.of(page, size);
         Page<Doctor> doctorPage = doctorRepository.findAll(pageable);
 
         if (doctorPage.isEmpty()) {
+            log.info("Pagination result: No doctors found for page={}, size={}", page, size);
             return Page.empty();
         }
 
-        return doctorPage.map(doctorMapper::toDto);
+        log.info("Pagination success: page={}, size={}, totalElements={}",
+                page, size, doctorPage.getTotalElements());
 
+        return doctorPage.map(doctorMapper::toDto);
     }
 
     @Override
     public void delete(Long doctorId) {
         // Get currently logged-in user
-        User currentUser = securityUtil.getCurrentUser();
 
-        // Fetch doctor linked to the current user
+        User currentUser = securityUtil.getCurrentUser();
+        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
+
+        log.info("Doctor delete attempt by user={} for doctorId={}", maskedEmail, doctorId);
+
         Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found for " +
                         "current user"));
 
-        // Ensure the current user is deleting only their own profile
+
         if (!currentDoctor.getId().equals(doctorId)) {
+            log.warn("Unauthorized delete attempt: user={} tried to delete doctorId={}", maskedEmail, doctorId);
             throw new UnAuthException("You are not authorized to delete this doctor profile.");
         }
 
@@ -385,11 +405,14 @@ public class DoctorServiceImpl implements DoctorService {
         // Delete the doctor and associated user
         doctorRepository.delete(currentDoctor); // First delete doctor
         userRepository.delete(currentUser);     // Then delete linked user
+
     }
 
 
     @Override
     public Page<DoctorAppointmentDto> listAppointments(int page, int size) {
+        log.info("Doctor appointment list request: page={}, size={}", page, size);
+
         if (page < 0 || size <= 0) {
             throw new
                     InvalidRequestException("Page index must not be negative and size must be " +
@@ -401,54 +424,81 @@ public class DoctorServiceImpl implements DoctorService {
                 .orElseThrow(() -> new
                         ResourceNotFoundException("Doctor not found for the logged-in user"));
 
+
         Pageable pageable = PageRequest.of(page, size);
         Page<DoctorAppointment> appointmentPage = doctorAppointmentRepository
                 .findByDoctorId(doctor.getId(), pageable);
+
+        log.info("Fetched {} appointments for doctorId={}, user={}",
+                appointmentPage.getTotalElements(), doctor.getId(), maskedEmail);
 
         return appointmentPage.map(doctorMapper::toDto);
     }
 
     @Override
     public DoctorAppointmentDto rescheduleAppointment(Long appointmentId, LocalDateTime newTime) {
-        Long userId = securityUtil.getCurrentUser().getId();
+        User currentUser = securityUtil.getCurrentUser();
+        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
+
+        log.info("Reschedule attempt: appointmentId={}, newTime={}, user={}", appointmentId, newTime, maskedEmail);
 
         // Fetch the doctor based on userId
         Doctor doctor = doctorRepository.findByUserId(userId)
                 .orElseThrow(() -> new
                         ResourceNotFoundException("Doctor not found for logged-in user"));
 
-        // Fetch the appointment using the appointmentId
+
         DoctorAppointment doctorAppointment = doctorAppointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("DoctorAppointment not found"));
+                .orElseThrow(() -> {
+                    log.warn("Appointment not found: appointmentId={}, user={}", appointmentId, maskedEmail);
+                    return new ResourceNotFoundException("DoctorAppointment not found");
+                });
 
         if (!doctorAppointment.getDoctor().getId().equals(doctor.getId())) {
             throw new
                     RuntimeException("Unauthorized: You can only reschedule your own appointments");
+
         }
 
         doctorAppointment.setAppointmentTime(newTime);
         doctorAppointment.setStatus(AppointmentStatus.RESCHEDULED);
 
-        return doctorMapper.toDto(doctorAppointmentRepository.save(doctorAppointment));
-    }
+        DoctorAppointment saved = doctorAppointmentRepository.save(doctorAppointment);
 
+        log.info("Rescheduled appointmentId={} to {}, doctorId={}, user={}",
+                appointmentId, newTime, doctor.getId(), maskedEmail);
+
+        return doctorMapper.toDto(saved);
+    }
     @Override
     public void cancelAppointment(Long appointmentId) {
-        Long userId = securityUtil.getCurrentUser().getId();
+        User currentUser = securityUtil.getCurrentUser();
+        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
+
+        log.info("Cancel appointment request: appointmentId={}, user={}", appointmentId, maskedEmail);
 
         Doctor doctor = doctorRepository.findByUserId(userId)
                 .orElseThrow(() -> new
                         ResourceNotFoundException("Doctor not found for logged-in user"));
 
+
         DoctorAppointment doctorAppointment = doctorAppointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("DoctorAppointment not found"));
+                .orElseThrow(() -> {
+                    log.warn("Appointment not found: appointmentId={}, user={}", appointmentId, maskedEmail);
+                    return new ResourceNotFoundException("DoctorAppointment not found");
+                });
 
         if (!doctorAppointment.getDoctor().getId().equals(doctor.getId())) {
+            log.warn("Unauthorized cancel attempt: appointmentId={}, doctorId={}, user={}",
+                    appointmentId, doctor.getId(), maskedEmail);
             throw new RuntimeException("Unauthorized: You can only cancel your own appointments");
         }
 
         doctorAppointment.setStatus(AppointmentStatus.CANCELLED);
         doctorAppointmentRepository.save(doctorAppointment);
+
+        log.info("Successfully cancelled appointmentId={} by doctorId={}, user={}",
+                appointmentId, doctor.getId(), maskedEmail);
     }
 
 }

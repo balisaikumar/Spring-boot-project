@@ -23,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -34,11 +35,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
+@Slf4j
 @RequestMapping("/admin")
 @AllArgsConstructor
 public class AdminController {
-
-    private static final Class<?> logger = PatientController.class;
 
     @Autowired
     private AdminService adminService;
@@ -58,14 +58,23 @@ public class AdminController {
             @ApiResponse(description = "Email or contact already exists", responseCode = "400")
     })
     public ResponseEntity<?> registerAdmin(@Valid @RequestBody RegisterAdminRequest registerAdminRequest) {
+        String maskedEmail = LoggerUtil.mask(registerAdminRequest.getEmail());
+        String maskedContact = LoggerUtil.mask(registerAdminRequest.getContactNumber());
+
+        log.info( "Received request to register admin with email={}, contact={}", maskedEmail, maskedContact);
+
         try {
             Admin admin = adminService.registerAdmin(registerAdminRequest);
+            log.info( "Admin registered successfully: username={}, email={}",
+                    registerAdminRequest.getUserName(), maskedEmail);
+
             return ResponseEntity.status(201).body(Map.of(
                     "message", "Admin registered successfully!",
                     "admin", admin
             ));
         } catch (DuplicateEntryException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            log.warn( "Admin registration failed due to duplicate entry: {}", e.getMessage());
+            return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -75,13 +84,19 @@ public class AdminController {
             @ApiResponse(description = "Invalid credentials", responseCode = "401")
     })
     public ResponseEntity<?> loginAdmin(@Valid @RequestBody LoginRequest loginRequest) {
+        String maskedEmail = LoggerUtil.mask(loginRequest.getEmail());
+        log.info("Admin login attempt: email={}", maskedEmail);
+
         try {
             TokenPair tokenPair = adminService.loginAdmin(loginRequest);
+
+            log.info("Admin login successful: email={}", maskedEmail);
             return ResponseEntity.ok(Map.of(
                     "accessToken", tokenPair.getAccessToken(),
                     "refreshToken", tokenPair.getRefreshToken()
             ));
         } catch (RuntimeException e) {
+            log.warn("Admin login failed: email={}, reason={}", maskedEmail, e.getMessage());
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }
     }
@@ -90,7 +105,7 @@ public class AdminController {
     @ApiResponse(responseCode = "200", description = "Reset link sent to email if user exists")
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
-        LoggerUtil.info(logger, "Forgot password API called for email: {}", request.getEmail());
+        log.info( "Forgot password API called for email: {}", request.getEmail());
         forgotPasswordResetService.forgotPassword(request, httpRequest);
         return ResponseEntity.ok("Password reset link sent to your registered email.");
     }
@@ -105,7 +120,7 @@ public class AdminController {
     @ApiResponse(responseCode = "200", description = "Password reset successful")
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        LoggerUtil.info(logger, "Reset password API called with token: {}", request.getToken());
+        log.info( "Reset password API called with token: {}", request.getToken());
         forgotPasswordResetService.resetPassword(request);
         return ResponseEntity.ok("Password reset successful.");
     }
@@ -195,11 +210,18 @@ public class AdminController {
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) int size) {
 
+        log.info("Fetching paginated admin records: page={}, size={}", page, size);
+
         Page<AdminDto> admins = adminService.getWithPagination(page, size);
 
-        return admins.isEmpty()
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.ok(Map.of(
+        if (admins.isEmpty()) {
+            log.warn("No admin records found for page={}, size={}", page, size);
+            return ResponseEntity.noContent().build();
+        }
+        log.info("Fetched {} admin records: page={}, totalPages={}, totalElements={}",
+                admins.getNumberOfElements(), page, admins.getTotalPages(), admins.getTotalElements());
+
+        return ResponseEntity.ok(Map.of(
                 "admins", admins.getContent(),
                 "currentPage", admins.getNumber(),
                 "totalPages", admins.getTotalPages(),
@@ -216,10 +238,14 @@ public class AdminController {
                     @ApiResponse(responseCode = "404", description = "Admin Not Found")
             })
     public ResponseEntity<?> deleteAdminById(@PathVariable("id") Long adminId) {
+        log.info("Received request to delete admin with ID={}", adminId);
+
         try {
             adminService.delete(adminId);
+            log.info("Admin deleted successfully with ID={}", adminId);
             return ResponseEntity.ok(Map.of("message", "Admin deleted successfully"));
         } catch (ResourceNotFoundException ex) {
+            log.warn("Failed to delete admin with ID={}. Reason: {}", adminId, ex.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
         }
     }
