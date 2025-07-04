@@ -6,7 +6,8 @@ import org.slf4j.MDC;
 
 /**
  * Centralized Logger Utility used throughout the application.
- * Helps in adding traceId/requestId or any context fields (MDC) automatically.
+ * Helps in adding traceId/requestId or any context fields (MDC) automatically,
+ * and supports secure logging with masking of sensitive fields.
  */
 public final class LoggerUtil {
 
@@ -14,9 +15,7 @@ public final class LoggerUtil {
         // Prevent instantiation
     }
 
-    /**
-     * Returns SLF4J Logger instance for the given class.
-     */
+    // ---------------- Get Logger ----------------
     public static Logger getLogger(Class<?> clazz) {
         return LoggerFactory.getLogger(clazz);
     }
@@ -45,17 +44,21 @@ public final class LoggerUtil {
         getLogger(clazz).error(buildMessage(message), throwable);
     }
 
-    // ---------------- MDC Message Enhancer ----------------
+    // ---------------- Masked INFO Logger ----------------
+    public static void infoMasked(Class<?> clazz, String message, String email, String contactNumber) {
+        getLogger(clazz).info(buildMessage(message),
+                mask(email), mask(contactNumber));
+    }
+
+    // ---------------- MDC Enhancer ----------------
     private static String buildMessage(String message) {
         StringBuilder builder = new StringBuilder();
 
-        // Add requestId if available
         String requestId = MDC.get("requestId");
         if (requestId != null) {
             builder.append("[requestId=").append(requestId).append("] ");
         }
 
-        // Add userId if available
         String userId = MDC.get("userId");
         if (userId != null) {
             builder.append("[userId=").append(userId).append("] ");
@@ -65,4 +68,20 @@ public final class LoggerUtil {
         return builder.toString();
     }
 
+    // ---------------- Masking Method ----------------
+    public static String mask(String input) {
+        if (input == null || input.isEmpty()) return "***";
+
+        if (input.contains("@")) {
+            String[] parts = input.split("@");
+            String namePart = parts[0];
+            return (namePart.length() > 2 ? namePart.substring(0, 2) : "*") + "***@" + parts[1];
+        } else if (input.matches("\\d{10}")) {
+            return input.substring(0, 2) + "****" + input.substring(6);
+        }
+
+        return "***";
+    }
+
 }
+

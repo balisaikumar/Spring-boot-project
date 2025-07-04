@@ -17,6 +17,7 @@ import com.brinta.hcms.request.registerRequest.RegisterAdminRequest;
 import com.brinta.hcms.service.AdminService;
 import com.brinta.hcms.service.JwtService;
 import com.brinta.hcms.utility.SecurityUtil;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +30,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@Transactional
 public class AdminServiceImpl implements AdminService {
 
     @Autowired
@@ -187,3 +189,4 @@ public class AdminServiceImpl implements AdminService {
     }
 
 }
+

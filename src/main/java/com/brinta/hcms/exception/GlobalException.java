@@ -1,7 +1,6 @@
 package com.brinta.hcms.exception;
 
 import com.brinta.hcms.exception.exceptionHandler.*;
-import com.brinta.hcms.response.GenericResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -16,7 +15,7 @@ public class GlobalException {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleException(Exception ex) {
-        ex.printStackTrace(); // ✅ Print actual error to logs
+        ex.printStackTrace(); // Print actual error to logs
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", ex.getMessage()));
     }
@@ -37,9 +36,10 @@ public class GlobalException {
     }
 
     @ExceptionHandler(DuplicateEntryException.class)
-    public ResponseEntity<?> handleEmailException(DuplicateEntryException exception) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new GenericResponse(false, exception.getMessage()));
+    public ResponseEntity<?> handleDuplicateEntryException(DuplicateEntryException exception) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("message", exception.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
     @ExceptionHandler(InvalidRequestException.class)
@@ -55,6 +55,19 @@ public class GlobalException {
     @ExceptionHandler(UnAuthException.class)
     public ResponseEntity<String> unAuthorizedException(UnAuthException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exception.getMessage());
+    }
+
+    @ExceptionHandler(NoReferralFoundException.class)
+    public ResponseEntity<?> handleNoReferralFound(NoReferralFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(UnsupportedOperation.class)
+    public ResponseEntity<?> handleUnsupportedOperation(UnsupportedOperationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                Map.of("message", ex.getMessage())
+        );
     }
 
 }

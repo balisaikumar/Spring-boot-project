@@ -5,8 +5,10 @@ import com.brinta.hcms.dto.RefreshTokenRequest;
 import com.brinta.hcms.dto.RegisterRequest;
 import com.brinta.hcms.dto.TokenPair;
 import com.brinta.hcms.entity.User;
+import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
 import com.brinta.hcms.repository.UserRepository;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
+import com.brinta.hcms.utility.LoggerUtil;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -21,6 +23,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @AllArgsConstructor
+@Transactional
 public class AuthService {
 
     private UserRepository userRepository;
@@ -29,16 +32,19 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
-    @Transactional
     public void registerUser(RegisterRequest registerRequest) {
+        LoggerUtil.info(this.getClass(), "Attempting to register user with username: {}",
+                registerRequest.getUsername());
+
         // Check if user with the same username already exists
-        if(userRepository.existsByUsername(registerRequest.getUsername())) {
-            throw new IllegalArgumentException("Username is already in use");
+        if (userRepository.existsByUsername(registerRequest.getUsername())) {
+            LoggerUtil.warn(this.getClass(), "User already exists with username: {}",
+                    registerRequest.getUsername());
+            throw new DuplicateEntryException("User is already in use");
         }
 
-        // Create new user
-        User user = User
-                .builder()
+        // Create new user and explicitly set isActive to true
+        User user = User.builder()
                 .name(registerRequest.getName())
                 .username(registerRequest.getUsername())
                 .email(registerRequest.getEmail())
@@ -47,6 +53,8 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+        LoggerUtil.info(this.getClass(), "User successfully registered with username: {}",
+                registerRequest.getUsername());
     }
 
     public TokenPair login(LoginRequest loginRequest) {
@@ -92,3 +100,4 @@ public class AuthService {
     }
 
 }
+

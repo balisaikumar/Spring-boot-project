@@ -21,6 +21,12 @@ public class RegisterPatientRequest {
     @NotBlank(message = "Name is required")
     private String name;
 
+    @NotBlank(message = "Age is required")
+    private String age;
+
+    @NotBlank(message = "Gender is required")
+    private String gender;
+
     @NotBlank(message = "Contact number is required")
     private String contactNumber;
 
@@ -30,3 +36,4 @@ public class RegisterPatientRequest {
     private PatientRegistrationStatus status;
 
 }
+
