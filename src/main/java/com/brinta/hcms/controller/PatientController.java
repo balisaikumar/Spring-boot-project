@@ -112,7 +112,7 @@ public class PatientController {
     }
 
     @PutMapping(value = "/profile/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('PATIENT')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updatePatient(@PathVariable Long id, @Valid @RequestBody
     UpdatePatientRequest updatePatientRequest) {
         LoggerUtil.info(logger, "Update attempt for patient ID: {}", id);

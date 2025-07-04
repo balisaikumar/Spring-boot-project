@@ -13,6 +13,8 @@ public class DoctorDto {
 
     private String name;
 
+    private String email;
+
     private String contactNumber;
 
     private String specialization;

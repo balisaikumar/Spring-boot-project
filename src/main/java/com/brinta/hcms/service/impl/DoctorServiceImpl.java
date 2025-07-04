@@ -147,23 +147,23 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public Doctor update(Long doctorId, UpdateDoctorRequest updateDoctorRequest) {
-        // Get the currently authenticated user
         User currentUser = securityUtil.getCurrentUser();
 
-        // Ensure the user is linked to the doctor they are trying to update
-        Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> new
-                        ResourceNotFoundException("Doctor profile not found for current user"));
+        // Allow ADMIN and SUPER_ADMIN to update any doctor
+        boolean isAdmin = currentUser.getRole() == Roles.ADMIN || currentUser.getRole() == Roles.SUPER_ADMIN;
 
-        // Check if currentDoctor.getId() matches the path variable doctorId
-        if (!currentDoctor.getId().equals(doctorId)) {
-            throw new UnAuthException("You are not authorized to update this doctor's profile.");
+        if (!isAdmin) {
+            // Only allow a doctor to update their own profile
+            Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found for current user"));
+
+            if (!currentDoctor.getId().equals(doctorId)) {
+                throw new UnAuthException("You are not authorized to update this doctor's profile.");
+            }
         }
 
-        // Proceed with update
         Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("The entered ID is not valid in the Database"));
+                .orElseThrow(() -> new ResourceNotFoundException("The entered ID is not valid in the Database"));
 
         doctorMapper.update(updateDoctorRequest, doctor);
 
@@ -180,6 +180,7 @@ public class DoctorServiceImpl implements DoctorService {
 
         return doctorRepository.save(doctor);
     }
+
 
     @Override
     public List<DoctorDto> findBy(Long doctorId, String contactNumber, String email) {
@@ -223,25 +224,32 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public void delete(Long doctorId) {
-
-        // Get currently logged-in user
         User currentUser = securityUtil.getCurrentUser();
 
-        // Fetch doctor linked to the current user
-        Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> new
-                        ResourceNotFoundException("Doctor profile not found for current user"));
+        boolean isAdmin = currentUser.getRole() == Roles.ADMIN || currentUser.getRole() == Roles.SUPER_ADMIN;
 
-        // Ensure the current user is deleting only their own profile
-        if (!currentDoctor.getId().equals(doctorId)) {
-            throw new UnAuthException("You are not authorized to delete this doctor profile.");
+        if (!isAdmin) {
+            Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found for current user"));
+
+            if (!currentDoctor.getId().equals(doctorId)) {
+                throw new UnAuthException("You are not authorized to delete this doctor profile.");
+            }
+
+            doctorRepository.delete(currentDoctor);
+            userRepository.delete(currentUser);
+        } else {
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Doctor not found with ID: " + doctorId));
+
+            User user = doctor.getUser();
+            doctorRepository.delete(doctor);
+            if (user != null) {
+                userRepository.delete(user);
+            }
         }
-
-        // Delete the doctor and associated user
-        doctorRepository.delete(currentDoctor); // First delete doctor
-
-        userRepository.delete(currentUser); // Then delete linked user
     }
+
 
     @Override
     public Page<DoctorAppointmentDto> listAppointments(int page, int size) {

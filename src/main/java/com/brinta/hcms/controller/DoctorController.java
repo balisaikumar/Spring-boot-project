@@ -81,7 +81,7 @@ public class DoctorController {
     }
 
     @PutMapping(value = "/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Update Doctor", responses = {@ApiResponse(description = "Doctor details updated successfully", responseCode = "200", content = @Content(schema = @Schema(implementation = Doctor.class))), @ApiResponse(description = "Doctor not found", responseCode = "404"), @ApiResponse(description = "Invalid input data", responseCode = "400")})
     public ResponseEntity<?> updateDoctor(@PathVariable Long id, @Valid @RequestBody UpdateDoctorRequest updateDoctorRequest) {
         try {
@@ -93,7 +93,7 @@ public class DoctorController {
     }
 
     @GetMapping(value = "/findBy", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get Doctor By Parameters", responses = {@ApiResponse(responseCode = "200", description = "Doctor found", content = @Content(schema = @Schema(implementation = DoctorDto.class))), @ApiResponse(responseCode = "404", description = "No matching doctor found"), @ApiResponse(responseCode = "400", description = "Enter input field")})
     public ResponseEntity<?> findByParams(@RequestParam(required = false) Long doctorId, @RequestParam(required = false) String contactNumber, @RequestParam(required = false) String email) {
         List<DoctorDto> doctor = doctorService.findBy(doctorId, contactNumber, email);
@@ -125,7 +125,7 @@ public class DoctorController {
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Delete Doctor", responses = {@ApiResponse(responseCode = "204", description = "Doctor Deleted Successfully"), @ApiResponse(responseCode = "400", description = "Enter input field"), @ApiResponse(responseCode = "404", description = "Enter the correct ID")})
     public ResponseEntity<?> deleteDoctorById(@PathVariable("id") Long doctorId) {
         try {
@@ -150,7 +150,7 @@ public class DoctorController {
     }
 
     @PutMapping(value = "rescheduleAppointment/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Reschedule DoctorAppointment", responses = {@ApiResponse(description = "DoctorAppointment rescheduled", responseCode = "200"), @ApiResponse(description = "DoctorAppointment not found", responseCode = "404")})
     public ResponseEntity<?> rescheduleAppointment(@PathVariable Long id, @Valid @RequestBody RescheduleAppointmentRequest request) {
         try {
@@ -162,7 +162,7 @@ public class DoctorController {
     }
 
     @DeleteMapping(value = "cancelAppointment/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Cancel DoctorAppointment", responses = {@ApiResponse(description = "DoctorAppointment cancelled", responseCode = "200"), @ApiResponse(description = "DoctorAppointment not found or unauthorized", responseCode = "404")})
     public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
         try {
