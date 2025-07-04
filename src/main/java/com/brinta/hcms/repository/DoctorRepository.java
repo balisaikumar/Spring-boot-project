@@ -1,5 +1,6 @@
 package com.brinta.hcms.repository;
 
+import com.brinta.hcms.entity.Agent;
 import com.brinta.hcms.entity.Doctor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -19,4 +20,9 @@ public interface DoctorRepository extends JpaRepository<Doctor, Long> {
 
     Optional<Doctor> findByUserId(Long userId);
 
+    Optional<Doctor> findByEmailAndContactNumber(String email, String contactNumber);
+
+    Optional<Doctor> findByAgent(Agent agent);
+
 }
+

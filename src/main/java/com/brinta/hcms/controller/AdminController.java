@@ -101,33 +101,6 @@ public class AdminController {
         }
     }
 
-    @PostMapping(value = "/doctor/register", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Register Doctor", responses = {
-            @ApiResponse(description = "Added Doctor in the database",
-                    responseCode = "201",
-                    content = @Content(schema = @Schema(implementation = Doctor.class))),
-            @ApiResponse(description = "Email already exists", responseCode = "400")})
-    public ResponseEntity<?> registerDoctor(@Valid @RequestBody RegisterDoctorRequest registerDoctor) {
-        String maskedEmail = LoggerUtil.mask(registerDoctor.getEmail());
-        String maskedContact = LoggerUtil.mask(registerDoctor.getContactNumber());
-
-        log.info("Doctor registration request received: email={}, contact={}", maskedEmail, maskedContact);
-
-        try {
-            Doctor createdDoctor = doctorService.register(registerDoctor);
-            log.info("Doctor registered successfully: username={}, email={}",
-                    registerDoctor.getUserName(), maskedEmail);
-
-            return ResponseEntity.status(201)
-                    .body(Map.of("message", "Doctor registered successfully!",
-                            "doctor", createdDoctor));
-        } catch (DuplicateEntryException exception) {
-            log.warn("Doctor registration failed due to duplicate: {}", exception.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
-        }
-    }
-
     @Operation(summary = "Forgot Password", description = "Send a password reset link to admin email")
     @ApiResponse(responseCode = "200", description = "Reset link sent to email if user exists")
     @PostMapping("/forgot-password")
@@ -150,6 +123,79 @@ public class AdminController {
         log.info( "Reset password API called with token: {}", request.getToken());
         forgotPasswordResetService.resetPassword(request);
         return ResponseEntity.ok("Password reset successful.");
+    }
+
+    // ---------------- INTERNAL DOCTOR REGISTRATION ----------------
+    @PostMapping(value = "/register/internal", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Register Internal Doctor", responses = {
+            @ApiResponse(description = "Added internal doctor in the database", responseCode = "201",
+                    content = @Content(schema = @Schema(implementation = Doctor.class))),
+            @ApiResponse(description = "Email or phone already exists", responseCode = "400")
+    })
+    public ResponseEntity<?> registerInternalDoctor(@Valid @RequestBody
+                                                        RegisterDoctorRequest registerDoctor) {
+        try {
+            LoggerUtil.info(getClass(), "Registering internal doctor with email: {}",
+                    registerDoctor.getEmail());
+            Doctor created = doctorService.registerInternalDoctor(registerDoctor);
+            return ResponseEntity.status(201).body(Map.of(
+                    "message", "Internal doctor registered successfully",
+                    "doctor", created
+            ));
+        } catch (DuplicateEntryException ex) {
+            LoggerUtil.warn(getClass(), "Duplicate entry for internal doctor: {}",
+                    ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        } catch (Exception e) {
+            LoggerUtil.error(getClass(), "Error while registering internal doctor", e);
+            return ResponseEntity.internalServerError().body(Map.of("error",
+                    "Unexpected error occurred"));
+        }
+    }
+
+    // ---------------- EXTERNAL DOCTOR REGISTRATION ----------------
+    @PostMapping(value = "/register/external", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Register External Doctor", responses = {
+            @ApiResponse(description = "Added external doctor in the database", responseCode = "201",
+                    content = @Content(schema = @Schema(implementation = Doctor.class))),
+            @ApiResponse(description = "Agent type or email already exists", responseCode = "400"),
+            @ApiResponse(description = "Unexpected server error", responseCode = "500")
+    })
+    public ResponseEntity<?> registerExternalDoctor(@Valid @RequestBody
+                                                        RegisterDoctorRequest registerDoctor) {
+        try {
+            LoggerUtil.info(getClass(),
+                    "Registering external doctor with email: {}", registerDoctor.getEmail());
+
+            Doctor created = doctorService.registerExternalDoctor(registerDoctor);
+
+            LoggerUtil.info(getClass(),
+                    "External doctor registered successfully: {}", created.getEmail());
+
+            return ResponseEntity.status(201).body(Map.of(
+                    "message", "External doctor registered successfully",
+                    "doctor", created
+            ));
+
+        } catch (ResourceNotFoundException ex) {
+            LoggerUtil.warn(getClass(),
+                    "Missing agent type for external doctor: {}", ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+
+        } catch (DuplicateEntryException ex) {
+            LoggerUtil.warn(getClass(),
+                    "Duplicate entry while registering external doctor: {}", ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+
+        } catch (Exception ex) {
+            LoggerUtil.error(getClass(),
+                    "Unexpected error while registering external doctor", ex);
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", "Unexpected error occurred"
+            ));
+        }
     }
 
     @GetMapping(value = "/users", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -205,3 +251,4 @@ public class AdminController {
     }
 
 }
+

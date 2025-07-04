@@ -4,7 +4,9 @@ public enum PatientRegistrationStatus {
 
     ONLINE,
 
-    OFFLINE
+    OFFLINE,
+
+    REFERRAL
 
 }
 

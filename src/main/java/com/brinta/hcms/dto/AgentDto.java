@@ -1,5 +1,6 @@
 package com.brinta.hcms.dto;
 
+import com.brinta.hcms.enums.AgentType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,15 +8,16 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class DoctorDto {
+public class AgentDto {
 
     private String name;
 
-    private String specialization;
+    private String contactNumber;
 
     private String email;
 
-    private String contactNumber;
+    private String agentCode;
+
+    private AgentType agentType;
 
 }
-

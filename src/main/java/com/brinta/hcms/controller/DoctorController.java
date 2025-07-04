@@ -15,6 +15,7 @@ import com.brinta.hcms.service.ForgotPasswordResetService;
 import com.brinta.hcms.utility.LoggerUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,29 +46,72 @@ public class DoctorController {
     @Autowired
     private ForgotPasswordResetService forgotPasswordResetService;
 
-    @PostMapping(value = "/login",produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Login for doctors", responses = {
-            @ApiResponse(responseCode = "200", description = "Login successful"),
-            @ApiResponse(responseCode = "401", description = "Invalid credentials", content = @Content)
-    })
-    public ResponseEntity<?> doctorLogin(@RequestBody LoginRequest request) {
-        String maskedEmail = LoggerUtil.mask(request.getEmail());
-        log.info("Doctor login attempt with email: {}", maskedEmail);
+    private static final Class<?> logger = PatientController.class;
+
+    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Doctor Login",
+            description = "Allows internal and external doctors to login using email and password.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Login successful",
+                            content = @Content(schema = @Schema(example = """
+                                {
+                                  "accessToken": "jwt-access-token",
+                                  "refreshToken": "jwt-refresh-token",
+                                  "role": "INTERNAL_DOCTOR | EXTERNAL_DOCTOR"
+                                }
+                            """))
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid request or credentials"
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Server error"
+                    )
+            }
+    )
+    public ResponseEntity<?> loginDoctor(@Valid @RequestBody LoginRequest request) {
+        LoggerUtil.info(getClass(),
+                "Login request received for doctor: {}", request.getEmail());
+
         try {
-            Map<String, Object> response = doctorService.doctorLogin(request);
-            log.info("Doctor login successful for email: {}", maskedEmail);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException ex) {
-            log.warn("Doctor login failed for email: {} - Reason: {}", maskedEmail, ex.getMessage());
-            return ResponseEntity.status(401).body(Map.of("error", ex.getMessage()));
+            Map<String, Object> tokenResponse = doctorService.doctorLogin(request);
+
+            LoggerUtil.info(getClass(),
+                    "Login successful for doctor: {}", request.getEmail());
+            return ResponseEntity.ok(tokenResponse);
+
+        } catch (InvalidRequestException ex) {
+            LoggerUtil.warn(getClass(),
+                    "Validation failed for doctor login: {}", ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+
+        } catch (RuntimeException e) {
+            LoggerUtil.warn(getClass(),
+                    "Login failed for doctor [{}]: {}", request.getEmail(), e.getMessage());
+            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+
+        } catch (Exception ex) {
+            LoggerUtil.error(getClass(), "Unexpected error during doctor login", ex);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Unexpected server error"));
         }
     }
 
-    @Operation(summary = "Forgot Password", description = "Send a password reset link to doctor's email")
+    @Operation(summary = "Forgot Password", description = "Send a password reset " +
+            "link to doctor's email")
     @ApiResponse(responseCode = "200", description = "Reset link sent to email if user exists")
     @PostMapping("/forgot-password")
-    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
-        log.info("Forgot password API called for email: {}", request.getEmail());
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                                                 HttpServletRequest httpRequest) {
+        LoggerUtil.info(logger, "Forgot password API called for email: {}",
+                request.getEmail());
+
         forgotPasswordResetService.forgotPassword(request, httpRequest);
         return ResponseEntity.ok("Password reset link sent to your registered email.");
     }
@@ -75,86 +119,96 @@ public class DoctorController {
     @GetMapping("/reset-password")
     public ResponseEntity<String> validateResetToken(@RequestParam("token") String token) {
         String result = forgotPasswordResetService.validateResetToken(token);
-        return result.equals("Token is valid.") ? ResponseEntity.ok(result) : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        return result.equals("Token is valid.")
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
     }
 
-    @Operation(summary = "Reset Password", description = "Reset doctor's password using the token received via email")
+    @Operation(summary = "Reset Password", description = "Reset doctor's password using the " +
+            "token received via email")
     @ApiResponse(responseCode = "200", description = "Password reset successful")
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        log.info("Reset password API called with token: {}", request.getToken());
+        LoggerUtil.info(logger, "Reset password API called with token: {}",
+                request.getToken());
+
         forgotPasswordResetService.resetPassword(request);
         return ResponseEntity.ok("Password reset successful.");
     }
 
-    @PutMapping(value = "/update/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
-    @Operation(summary = "Update doctor profile", responses = {
-            @ApiResponse(responseCode = "200", description = "Doctor updated successfully"),
-            @ApiResponse(responseCode = "404", description = "Doctor not found", content = @Content)
-    })
-    public ResponseEntity<?> updateDoctor(@PathVariable Long id,
-                                          @Valid @RequestBody UpdateDoctorRequest updateRequest) {
-        log.info("Request to update doctor profile with ID: {}", id);
+    @PutMapping(value = "/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('DOCTOR', 'EXTERNAL_DOCTOR')")
+    @Operation(summary = "Update Doctor", responses = {@ApiResponse
+            (description = "Doctor details updated successfully",
+                    responseCode = "200", content = @Content(schema = @Schema
+                    (implementation = Doctor.class))),
+            @ApiResponse(description = "Doctor not found", responseCode = "404"),
+            @ApiResponse(description = "Invalid input data", responseCode = "400")})
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @Valid @RequestBody
+    UpdateDoctorRequest updateDoctorRequest) {
         try {
-            Doctor updatedDoctor = doctorService.update(id, updateRequest);
-            log.info("Doctor profile updated successfully for ID: {}", id);
-            return ResponseEntity.ok(Map.of("message", "Doctor updated successfully!", "doctor", updatedDoctor));
+            Doctor updatedDoctor = doctorService.update(id, updateDoctorRequest);
+            return ResponseEntity.ok(Map.of("message", "Doctor updated successfully!",
+                    "doctor", updatedDoctor));
         } catch (ResourceNotFoundException exception) {
             log.warn("Update failed: {}", exception.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", exception.getMessage()));
         }
     }
 
-    @GetMapping(value = "/findBy",produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
-    @Operation(summary = "Find doctor by ID, email or phone", responses = {
-            @ApiResponse(responseCode = "200", description = "Doctor(s) found"),
-            @ApiResponse(responseCode = "404", description = "No doctor found", content = @Content)
-    })
+    @GetMapping(value = "/findBy", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get Doctor By Parameters",
+            responses = {
+                    @ApiResponse(responseCode = "200",
+                            description = "Doctor found",
+                            content = @Content(schema = @Schema(implementation = DoctorDto.class))),
+                    @ApiResponse(responseCode = "404",
+                            description = "No matching doctor found"),
+                    @ApiResponse(responseCode = "400",
+                            description = "Enter input field")
+            })
     public ResponseEntity<?> findByParams(@RequestParam(required = false) Long doctorId,
                                           @RequestParam(required = false) String contactNumber,
                                           @RequestParam(required = false) String email) {
-        log.info("Find doctor with params - ID: {}, Contact: {}, Email: {}", doctorId,
-                LoggerUtil.mask(contactNumber), LoggerUtil.mask(email));
-        List<DoctorDto> doctors = doctorService.findBy(doctorId, contactNumber, email);
-        if (doctors.isEmpty()) {
-            log.warn("No doctor found with provided parameters.");
-            return ResponseEntity.status(404).body(Map.of("error", "No doctor found with given criteria."));
+        List<DoctorDto> doctor = doctorService.findBy(doctorId, contactNumber, email);
+        if (doctor.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("error",
+                    "No doctor found with given criteria."));
         }
-        log.info("Doctors found with given criteria: {}", doctors.size());
-        return ResponseEntity.ok(doctors);
+        log.info("Doctors found with given criteria: {}", doctor.size());
+        return ResponseEntity.ok(doctor);
     }
-
-    @GetMapping(value = "/all",produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
-    @Operation(summary = "Get paginated list of doctors", responses = {
-            @ApiResponse(responseCode = "200", description = "Doctors retrieved successfully"),
-            @ApiResponse(responseCode = "204", description = "No doctors found", content = @Content)
-    })
+    @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get All Doctors With Pagination",
+            responses = {
+                    @ApiResponse(description = "List of Doctors",
+                            responseCode = "200",
+                            content = @Content(schema = @Schema(implementation = DoctorDto.class))),
+                    @ApiResponse(description = "No doctors found", responseCode = "404")
+            })
     public ResponseEntity<?> getDoctorRecords(@RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "10") int size) {
-        log.info("Fetching doctor records with pagination - Page: {}, Size: {}", page, size);
-        Page<DoctorDto> doctors = doctorService.getWithPagination(page, size);
-        if (doctors.isEmpty()) {
-            log.info("No doctors found for pagination Page: {}, Size: {}", page, size);
-            return ResponseEntity.noContent().build();
-        }
-        log.info("Fetched {} doctor(s) on page {}", doctors.getNumberOfElements(), doctors.getNumber());
-        return ResponseEntity.ok(Map.of(
-                "doctors", doctors.getContent(),
+        var doctors = doctorService.getWithPagination(page, size);
+        return doctors.isEmpty()
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.ok(Map.of("doctors", doctors.getContent(),
                 "currentPage", doctors.getNumber(),
                 "totalPages", doctors.getTotalPages(),
-                "totalElements", doctors.getTotalElements()
-        ));
+                "totalElements", doctors.getTotalElements()));
+
     }
 
-    @DeleteMapping(value = "/delete/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
-    @Operation(summary = "Delete doctor by ID", responses = {
-            @ApiResponse(responseCode = "200", description = "Doctor deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "Doctor not found", content = @Content)
-    })
+    @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('DOCTOR', 'EXTERNAL_DOCTOR')")
+    @Operation(summary = "Delete Doctor",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Doctor Deleted Successfully"),
+                    @ApiResponse(responseCode = "400", description = "Enter input field"),
+                    @ApiResponse(responseCode = "404", description = "Enter the correct ID")
+            })
+
     public ResponseEntity<?> deleteDoctorById(@PathVariable("id") Long doctorId) {
         log.info("Attempting to delete doctor profile with ID: {}", doctorId);
         try {
@@ -169,6 +223,7 @@ public class DoctorController {
 
     @GetMapping(value = "/appointments",produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('DOCTOR')")
+
     @Operation(summary = "List appointments for the doctor", responses = {
             @ApiResponse(responseCode = "200", description = "Appointments fetched successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content),

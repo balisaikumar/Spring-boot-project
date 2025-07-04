@@ -3,9 +3,11 @@ package com.brinta.hcms.service.impl;
 import com.brinta.hcms.dto.DoctorAppointmentDto;
 import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.dto.TokenPair;
+import com.brinta.hcms.entity.Agent;
 import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.DoctorAppointment;
 import com.brinta.hcms.entity.User;
+import com.brinta.hcms.enums.AgentType;
 import com.brinta.hcms.enums.AppointmentStatus;
 import com.brinta.hcms.enums.Roles;
 import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
@@ -13,6 +15,7 @@ import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.DoctorMapper;
+import com.brinta.hcms.repository.AgentRepository;
 import com.brinta.hcms.repository.DoctorAppointmentRepository;
 import com.brinta.hcms.repository.DoctorRepository;
 import com.brinta.hcms.repository.UserRepository;
@@ -22,6 +25,8 @@ import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
 import com.brinta.hcms.service.DoctorService;
 import com.brinta.hcms.service.JwtService;
 import com.brinta.hcms.utility.LoggerUtil;
+import com.brinta.hcms.utility.ReferralCodeGenerator;
+
 import com.brinta.hcms.utility.SecurityUtil;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -61,6 +66,9 @@ public class DoctorServiceImpl implements DoctorService {
     private DoctorAppointmentRepository doctorAppointmentRepository;
 
     @Autowired
+    private AgentRepository agentRepository;
+
+    @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
     @Autowired
@@ -72,137 +80,249 @@ public class DoctorServiceImpl implements DoctorService {
     @Autowired
     private SecurityUtil securityUtil;
 
+    @Autowired
+    private ReferralCodeGenerator referralCodeGenerator;
+
     @Override
-    public Doctor register(RegisterDoctorRequest registerDoctor) {
-        String maskedEmail = LoggerUtil.mask(registerDoctor.getEmail());
-        String maskedContact = LoggerUtil.mask(registerDoctor.getContactNumber());
+    public Doctor registerInternalDoctor(RegisterDoctorRequest request) {
+        LoggerUtil.info(getClass(), "Attempting internal doctor registration for: {}",
+                request.getEmail());
 
-        log.info("Attempting to register doctor with email={}, contact={}",
-                maskedEmail, maskedContact);
-
-        boolean emailExists = doctorRepository.existsByEmail(registerDoctor.getEmail());
-        boolean contactExists = doctorRepository.existsByContactNumber(registerDoctor.getContactNumber());
-
-        if (emailExists || contactExists) {
-            StringBuilder errorMessage = new StringBuilder("Already Exists: ");
-            if (emailExists) errorMessage.append("Email: ").append(maskedEmail);
-            if (emailExists && contactExists) errorMessage.append(" | ");
-            if (contactExists) errorMessage.append("Contact: ").append(maskedContact);
-
-            log.warn("Doctor registration failed due to duplicate: {}", errorMessage);
-            throw new DuplicateEntryException(errorMessage.toString());
+        if (doctorRepository.existsByEmail(request.getEmail()) ||
+                doctorRepository.existsByContactNumber(request.getContactNumber())) {
+            LoggerUtil.warn(getClass(), "Duplicate internal doctor found: {}",
+                    request.getEmail());
+            throw new DuplicateEntryException("Email or contact number already exists.");
         }
 
-        User saveUser = new User();
-        saveUser.setUsername(registerDoctor.getUserName());
-        saveUser.setName(registerDoctor.getName());
-        saveUser.setEmail(registerDoctor.getEmail());
-        saveUser.setPassword(passwordEncoder.encode(registerDoctor.getPassword())); // DO NOT log
-        saveUser.setRole(Roles.DOCTOR);
+        // Create user
+        User user = new User();
+        user.setUsername(request.getUserName());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(Roles.DOCTOR);
+        userRepository.save(user);
+        LoggerUtil.debug(getClass(),
+                "Internal doctor user created: {}", request.getEmail());
 
-        Doctor doctor = doctorMapper.register(registerDoctor);
-        doctor.setUser(saveUser);
-        saveUser.setDoctor(doctor);
+        // Map doctor and save
+        Doctor doctor = doctorMapper.register(request);
+        doctor.setUser(user);
+        doctor.setReferralCode(null); // Internal doctor doesn’t need referral code
+        LoggerUtil.info(getClass(), "Internal doctor saved successfully: {}",
+                doctor.getEmail());
+        return doctorRepository.save(doctor);
+    }
 
-        userRepository.save(saveUser);
+    @Override
+    public Doctor registerExternalDoctor(RegisterDoctorRequest request) {
 
-        log.info("Doctor registered successfully: username={}, email={}, contact={}",
-                registerDoctor.getUserName(), maskedEmail, maskedContact);
+        LoggerUtil.info(getClass(),
+                "Attempting external doctor registration for: {}", request.getEmail());
 
-        return doctor;
+        // Validate agent type
+        if (request.getAgentType() == null) {
+            LoggerUtil.error(getClass(),
+                    "Agent type not provided for external doctor registration");
+            throw new ResourceNotFoundException("Agent type is required for external " +
+                    "doctor registration");
+        }
+
+        // Check duplicates in doctor table
+        if (doctorRepository.existsByEmail(request.getEmail()) ||
+                doctorRepository.existsByContactNumber(request.getContactNumber())) {
+            LoggerUtil.warn(getClass(),
+                    "Duplicate external doctor found: {}", request.getEmail());
+            throw new DuplicateEntryException("Email or contact number already exists.");
+        }
+
+        // Check duplicates in agent table
+        if (agentRepository.existsByEmail(request.getEmail()) ||
+                agentRepository.existsByContactNumber(request.getContactNumber())) {
+            LoggerUtil.warn(getClass(), "Duplicate agent found: {}", request.getEmail());
+            throw new DuplicateEntryException("Agent with given email or contact number " +
+                    "already exists.");
+        }
+
+        // Generate unique referral code
+        String referralCode;
+        do {
+            referralCode = referralCodeGenerator
+                    .generateReferralCode(request.getAgentType(), request.getName());
+        } while (agentRepository.existsByAgentCode(referralCode));
+
+        LoggerUtil.info(getClass(), "Generated referral code: {}", referralCode);
+
+        // Save to Agent table
+        Agent agent = Agent.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .contactNumber(request.getContactNumber())
+                .agentCode(referralCode)
+                .agentType(request.getAgentType())
+                .build();
+
+        Agent savedAgent = agentRepository.save(agent); // Save agent and keep reference
+        LoggerUtil.info(getClass(),
+                "Agent saved for external doctor: {}", request.getEmail());
+
+        // Save to Doctor table (linked to saved agent)
+        Doctor doctor = doctorMapper.register(request);
+        doctor.setReferralCode(referralCode);             // Set referral
+        doctor.setAgent(savedAgent);                      // Link agent to doctor here
+        Doctor savedDoctor = doctorRepository.save(doctor);
+
+        LoggerUtil.info(getClass(),
+                "External doctor saved successfully: {}", savedDoctor.getEmail());
+        return savedDoctor;
     }
 
     @Override
     public Map<String, Object> doctorLogin(LoginRequest request) {
-        String maskedEmail = LoggerUtil.mask(request.getEmail());
+        LoggerUtil.info(getClass(), "Doctor login attempt for email: {}",
+                request.getEmail());
 
-        // Validate input
+        // Validate request fields
         if (request.getEmail() == null || request.getPassword() == null) {
-            log.warn("Doctor login failed: missing email or password.");
+            LoggerUtil.warn(getClass(), "Missing email or password in login request");
             throw new IllegalArgumentException("Email and password must be provided");
         }
 
-        log.info("Doctor login attempt for email={}", maskedEmail);
+        // Attempt Internal Doctor Login (via User entity)
+        Optional<Doctor> internalDoctorOpt = doctorRepository.findByEmail(request.getEmail());
 
-        // Fetch the doctor by email
-        Doctor doctor = doctorRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> {
-                    log.warn("Doctor login failed: no doctor found with email={}", maskedEmail);
-                    return new RuntimeException("Doctor not found with email: " + maskedEmail);
-                });
+        if (internalDoctorOpt.isPresent()) {
+            Doctor internalDoctor = internalDoctorOpt.get();
 
-        // Check if user credentials are properly set
-        if (doctor.getUser() == null || doctor.getUser().getPassword() == null) {
-            log.error("Doctor login failed: user credentials missing for email={}", maskedEmail);
-            throw new RuntimeException("User credentials are not set properly for doctor: " + maskedEmail);
+            if (internalDoctor.getUser() != null) {
+                String encodedPassword = internalDoctor.getUser().getPassword();
+
+                // Validate password
+                if (!passwordEncoder.matches(request.getPassword(), encodedPassword)) {
+                    LoggerUtil.warn(getClass(),
+
+                            "Invalid password for internal doctor: {}", request.getEmail());
+                    throw new RuntimeException("Invalid credentials for internal doctor");
+                }
+
+                // Authenticate using Spring Security
+                Authentication authentication = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(request.getEmail(),
+                                request.getPassword())
+                );
+
+                TokenPair tokenPair = jwtService.generateTokenPair(authentication);
+                LoggerUtil.info(getClass(), "Internal doctor login successful for: {}",
+                        request.getEmail());
+
+                return Map.of(
+                        "accessToken", tokenPair.getAccessToken(),
+                        "refreshToken", tokenPair.getRefreshToken()
+                );
+            }
         }
 
-        // Validate password
-        if (!passwordEncoder.matches(request.getPassword(), doctor.getUser().getPassword())) {
-            log.warn("Doctor login failed: invalid password for email={}", maskedEmail);
-            throw new RuntimeException("Invalid password");
+        // Attempt External Doctor Login (via Agent entity)
+        Optional<Agent> externalDoctorOpt = agentRepository.findByEmail(request.getEmail());
+
+        if (externalDoctorOpt.isPresent()) {
+            Agent agent = externalDoctorOpt.get();
+
+            if (agent.getAgentType() == AgentType.EXTERNAL_DOCTOR) {
+                if (!passwordEncoder.matches(request.getPassword(), agent.getPassword())) {
+                    LoggerUtil.warn(getClass(), "Invalid password for external doctor: {}",
+                            request.getEmail());
+                    throw new RuntimeException("Invalid credentials for external doctor");
+                }
+
+                // Authenticate for token generation (even if no UserDetails object is used)
+                Authentication authentication = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(request.getEmail(),
+                                request.getPassword())
+                );
+
+                TokenPair tokenPair = jwtService.generateTokenPair(authentication);
+                LoggerUtil.info(getClass(), "External doctor login successful for: {}",
+                        request.getEmail());
+
+                return Map.of(
+                        "accessToken", tokenPair.getAccessToken(),
+                        "refreshToken", tokenPair.getRefreshToken()
+                );
+            }
         }
 
-        // Authenticate using Spring Security
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        doctor.getUser().getEmail(),
-                        request.getPassword()
-                )
-        );
+        // If no doctor found in either repository
+        LoggerUtil.error(getClass(), "Doctor login failed for email: {}",
+                request.getEmail());
+        throw new ResourceNotFoundException("Doctor not found or invalid credentials");
 
-        // Generate JWT token pair
-        TokenPair tokenPair = jwtService.generateTokenPair(authentication);
-
-        log.info("Doctor logged in successfully: email={}", maskedEmail);
-
-        // Return tokens (do NOT log tokens)
-        return Map.of(
-                "accessToken", tokenPair.getAccessToken(),
-                "refreshToken", tokenPair.getRefreshToken()
-        );
     }
 
     @Override
     public Doctor update(Long doctorId, UpdateDoctorRequest updateDoctorRequest) {
-        User currentUser = securityUtil.getCurrentUser();
-        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
+        Object actor = securityUtil.getCurrentActor();
 
-        log.info("Doctor update attempt by user={}", maskedEmail);
+        if (actor instanceof User user) {
+            // Internal Doctor
+            Doctor currentDoctor = doctorRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new
+                            ResourceNotFoundException("Doctor profile not found for current user"));
 
-        Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> {
-                    log.warn("Doctor update failed: profile not found for user={}", maskedEmail);
-                    return new ResourceNotFoundException("Doctor profile not found for current user");
-                });
+            if (!currentDoctor.getId().equals(doctorId)) {
+                throw new
+                        UnAuthException("You are not authorized to update this doctor's profile.");
+            }
 
-        if (!currentDoctor.getId().equals(doctorId)) {
-            log.warn("Doctor update blocked: user={} tried to update unauthorized doctorId={}", maskedEmail, doctorId);
+            // Update user info
+            if (updateDoctorRequest.getName() != null)
+                user.setName(updateDoctorRequest.getName());
+            if (updateDoctorRequest.getEmail() != null)
+                user.setEmail(updateDoctorRequest.getEmail());
+            userRepository.save(user);
+
+            // Update doctor info
+            doctorMapper.update(updateDoctorRequest, currentDoctor);
+            return doctorRepository.save(currentDoctor);
+
+        } else if (actor instanceof Agent agent && agent.getAgentType() ==
+                AgentType.EXTERNAL_DOCTOR) {
+            // External Doctor (stored only in Agent)
+            Doctor doctor = doctorRepository.findByEmail(agent.getEmail())
+                    .orElseThrow(() -> new
+                            ResourceNotFoundException("Doctor profile not found for external doctor"));
+
+            if (!doctor.getId().equals(doctorId)) {
+                throw new
+                        UnAuthException("You are not authorized to update this doctor's profile.");
+            }
+
+            // Update Agent fields
+            if (updateDoctorRequest.getName() != null)
+                agent.setName(updateDoctorRequest.getName());
+            if (updateDoctorRequest.getEmail() != null)
+                agent.setEmail(updateDoctorRequest.getEmail());
+            if (updateDoctorRequest.getContactNumber() != null)
+                agent.setContactNumber(updateDoctorRequest.getContactNumber());
+            agentRepository.save(agent);
+
+            // Update Doctor fields (mapped separately)
+            doctorMapper.update(updateDoctorRequest, doctor);
+
+            // Manually update specific fields in doctor entity if needed
+            if (updateDoctorRequest.getEmail() != null) {
+                doctor.setEmail(updateDoctorRequest.getEmail());
+            }
+            if (updateDoctorRequest.getName() != null) {
+                doctor.setName(updateDoctorRequest.getName());
+            }
+
+            return doctorRepository.save(doctor);
+
+        } else {
             throw new UnAuthException("You are not authorized to update this doctor's profile.");
         }
-
-        Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(() -> {
-                    log.warn("Doctor update failed: doctorId={} not found in DB", doctorId);
-                    return new ResourceNotFoundException("The entered ID is not valid in the Database");
-                });
-
-        doctorMapper.update(updateDoctorRequest, doctor);
-
-        User user = doctor.getUser();
-        if (user != null) {
-            if (updateDoctorRequest.getName() != null) {
-                user.setName(updateDoctorRequest.getName());
-            }
-            if (updateDoctorRequest.getEmail() != null) {
-                user.setEmail(updateDoctorRequest.getEmail());
-            }
-            userRepository.save(user);
-        }
-
-        Doctor updatedDoctor = doctorRepository.save(doctor);
-        log.info("Doctor updated successfully: doctorId={} by user={}", doctorId, maskedEmail);
-        return updatedDoctor;
     }
 
     @Override
@@ -261,119 +381,94 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public void delete(Long doctorId) {
+        // Get currently logged-in user
+
         User currentUser = securityUtil.getCurrentUser();
         String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
 
         log.info("Doctor delete attempt by user={} for doctorId={}", maskedEmail, doctorId);
 
         Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> {
-                    log.warn("Delete failed: Doctor profile not found for user={}", maskedEmail);
-                    return new ResourceNotFoundException("Doctor profile not found for current user");
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found for " +
+                        "current user"));
+
 
         if (!currentDoctor.getId().equals(doctorId)) {
             log.warn("Unauthorized delete attempt: user={} tried to delete doctorId={}", maskedEmail, doctorId);
             throw new UnAuthException("You are not authorized to delete this doctor profile.");
         }
 
-        doctorRepository.delete(currentDoctor);
-        userRepository.delete(currentUser);
+        // Delete the associated Agent (if exists)
+        Optional<Agent> agentOpt = agentRepository.findByEmail(currentUser.getEmail());
+        agentOpt.ifPresent(agentRepository::delete);
 
-        log.info("Doctor and user deleted successfully: doctorId={}, user={}", doctorId, maskedEmail);
+        // Delete the doctor and associated user
+        doctorRepository.delete(currentDoctor); // First delete doctor
+        userRepository.delete(currentUser);     // Then delete linked user
+
     }
 
     @Override
     public Page<DoctorAppointmentDto> listAppointments(int page, int size) {
-        log.info("Doctor appointment list request: page={}, size={}", page, size);
-
         if (page < 0 || size <= 0) {
-            log.warn("Invalid appointment pagination params: page={}, size={}", page, size);
-            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
+            throw new
+                    InvalidRequestException("Page index must not be negative and size must be " +
+                    "greater than zero.");
         }
 
-        User currentUser = securityUtil.getCurrentUser();
-        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
-
-        Doctor doctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> {
-                    log.error("Doctor not found for user={}", maskedEmail);
-                    return new ResourceNotFoundException("Doctor not found for the logged-in user");
-                });
+        Long userId = securityUtil.getCurrentUser().getId();
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new
+                        ResourceNotFoundException("Doctor not found for the logged-in user"));
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<DoctorAppointment> appointmentPage = doctorAppointmentRepository.findByDoctorId(doctor.getId(), pageable);
-
-        log.info("Fetched {} appointments for doctorId={}, user={}",
-                appointmentPage.getTotalElements(), doctor.getId(), maskedEmail);
+        Page<DoctorAppointment> appointmentPage = doctorAppointmentRepository
+                .findByDoctorId(doctor.getId(), pageable);
 
         return appointmentPage.map(doctorMapper::toDto);
     }
 
     @Override
     public DoctorAppointmentDto rescheduleAppointment(Long appointmentId, LocalDateTime newTime) {
-        User currentUser = securityUtil.getCurrentUser();
-        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
+        Long userId = securityUtil.getCurrentUser().getId();
 
-        log.info("Reschedule attempt: appointmentId={}, newTime={}, user={}", appointmentId, newTime, maskedEmail);
+        // Fetch the doctor based on userId
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new
+                        ResourceNotFoundException("Doctor not found for logged-in user"));
 
-        Doctor doctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> {
-                    log.error("Doctor not found for user={}", maskedEmail);
-                    return new ResourceNotFoundException("Doctor not found for logged-in user");
-                });
-
+        // Fetch the appointment using the appointmentId
         DoctorAppointment doctorAppointment = doctorAppointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> {
-                    log.warn("Appointment not found: appointmentId={}, user={}", appointmentId, maskedEmail);
-                    return new ResourceNotFoundException("DoctorAppointment not found");
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("DoctorAppointment not found"));
 
         if (!doctorAppointment.getDoctor().getId().equals(doctor.getId())) {
-            log.warn("Unauthorized reschedule attempt: appointmentId={}, user={}", appointmentId, maskedEmail);
-            throw new RuntimeException("Unauthorized: You can only reschedule your own appointments");
+            throw new
+                    RuntimeException("Unauthorized: You can only reschedule your own appointments");
         }
 
         doctorAppointment.setAppointmentTime(newTime);
         doctorAppointment.setStatus(AppointmentStatus.RESCHEDULED);
 
-        DoctorAppointment saved = doctorAppointmentRepository.save(doctorAppointment);
-
-        log.info("Rescheduled appointmentId={} to {}, doctorId={}, user={}",
-                appointmentId, newTime, doctor.getId(), maskedEmail);
-
-        return doctorMapper.toDto(saved);
+        return doctorMapper.toDto(doctorAppointmentRepository.save(doctorAppointment));
     }
+
     @Override
     public void cancelAppointment(Long appointmentId) {
-        User currentUser = securityUtil.getCurrentUser();
-        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
+        Long userId = securityUtil.getCurrentUser().getId();
 
-        log.info("Cancel appointment request: appointmentId={}, user={}", appointmentId, maskedEmail);
-
-        Doctor doctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> {
-                    log.error("Doctor not found for user={}", maskedEmail);
-                    return new ResourceNotFoundException("Doctor not found for logged-in user");
-                });
+        Doctor doctor = doctorRepository.findByUserId(userId)
+                .orElseThrow(() -> new
+                        ResourceNotFoundException("Doctor not found for logged-in user"));
 
         DoctorAppointment doctorAppointment = doctorAppointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> {
-                    log.warn("Appointment not found: appointmentId={}, user={}", appointmentId, maskedEmail);
-                    return new ResourceNotFoundException("DoctorAppointment not found");
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("DoctorAppointment not found"));
 
         if (!doctorAppointment.getDoctor().getId().equals(doctor.getId())) {
-            log.warn("Unauthorized cancel attempt: appointmentId={}, doctorId={}, user={}",
-                    appointmentId, doctor.getId(), maskedEmail);
             throw new RuntimeException("Unauthorized: You can only cancel your own appointments");
         }
 
         doctorAppointment.setStatus(AppointmentStatus.CANCELLED);
         doctorAppointmentRepository.save(doctorAppointment);
-
-        log.info("Successfully cancelled appointmentId={} by doctorId={}, user={}",
-                appointmentId, doctor.getId(), maskedEmail);
     }
 
 }

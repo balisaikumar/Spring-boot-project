@@ -20,7 +20,7 @@ public class Patient {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     @JsonIgnore // this hides the user field in the output
     private User user;
 
@@ -28,6 +28,11 @@ public class Patient {
     private String name;
 
     @Column(nullable = false)
+    private String age;
+
+    @Column(nullable = false)
+    private String gender;
+
     private String email;
 
     @Column(nullable = false)
@@ -41,8 +46,7 @@ public class Patient {
     private PatientRegistrationStatus status;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "profile_status")
     private ProfileStatus profileStatus;
 
 }
-

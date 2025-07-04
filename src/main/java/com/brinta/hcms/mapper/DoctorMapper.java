@@ -15,13 +15,13 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface DoctorMapper {
 
+    // For external doctors — do NOT map to user
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "user.email", source = "email")
-    @Mapping(target = "user.username", source = "userName")
-    @Mapping(target = "user.role", ignore = true)
-    @Mapping(target = "user.password", ignore = true)
+    @Mapping(target = "referralCode", ignore = true)  // Will be set manually
+    @Mapping(target = "user", ignore = true)          // External doctors don't have user
     Doctor register(RegisterDoctorRequest registerDoctor);
 
+    // Updating internal doctor
     @Mapping(target = "name", source = "name")
     @Mapping(target = "specialization", source = "specialization")
     @Mapping(target = "contactNumber", source = "contactNumber")
@@ -34,6 +34,4 @@ public interface DoctorMapper {
 
     @Mapping(source = "patient.name", target = "patientName")
     DoctorAppointmentDto toDto(DoctorAppointment doctorAppointment);
-
 }
-

@@ -110,8 +110,9 @@ public class BranchController {
             @ApiResponse(responseCode = "404", description = "Branch not found"),
             @ApiResponse(responseCode = "400", description = "Invalid request data")
     })
-    public ResponseEntity<?> updateBranch(@PathVariable Long id, @RequestBody UpdateBranchRequest request) {
-        log.info("Received request to update branch with ID={}", id);
+    public ResponseEntity<?> updateBranch(@PathVariable Long id,
+                                          @RequestBody UpdateBranchRequest request) {
+
         try {
             Branch updatedBranch = branchService.updateBranch(id, request);
             log.info("Branch updated successfully: ID={}", updatedBranch.getId());
@@ -145,4 +146,6 @@ public class BranchController {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         }
     }
+
 }
+

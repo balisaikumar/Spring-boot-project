@@ -14,7 +14,9 @@ import java.util.Map;
 
 public interface DoctorService {
 
-    Doctor register(RegisterDoctorRequest registerDoctor);
+    Doctor registerInternalDoctor(RegisterDoctorRequest request);
+
+    Doctor registerExternalDoctor(RegisterDoctorRequest request);
 
     Map<String, Object> doctorLogin(LoginRequest request);
 

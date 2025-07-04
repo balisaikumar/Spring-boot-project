@@ -1,7 +1,10 @@
 package com.brinta.hcms.request.registerRequest;
 
+import com.brinta.hcms.enums.AgentType;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -29,4 +32,7 @@ public class RegisterDoctorRequest {
     @NotBlank(message = "Qualification is required")
     private String qualification;
 
+    private AgentType agentType; // Optional for external doctors only
+
 }
+
