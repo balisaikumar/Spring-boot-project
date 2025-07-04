@@ -62,9 +62,11 @@ public final class LoggerUtil {
         String userId = MDC.get("userId");
         if (userId != null) {
             builder.append("[userId=").append(userId).append("] ");
+        }
 
-
-  
+        builder.append(message);
+        return builder.toString();
+    }
 
     // ---------------- Masking Method ----------------
     public static String mask(String input) {
@@ -80,5 +82,6 @@ public final class LoggerUtil {
 
         return "***";
     }
+
 }
 

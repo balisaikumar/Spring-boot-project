@@ -114,7 +114,8 @@ public class AdminServiceImpl implements AdminService {
         String maskedEmail = LoggerUtil.mask(request.getEmail());
 
         if (request.getEmail() == null || request.getPassword() == null) {
-            log.warn("Admin login failed: email={}, reason={}", maskedEmail, "Missing email or password");
+            log.warn("Admin login failed: email={}, reason={}", maskedEmail,
+                    "Missing email or password");
             throw new IllegalArgumentException("Email and password must be provided");
         }
 
@@ -122,7 +123,8 @@ public class AdminServiceImpl implements AdminService {
 
         Admin admin = adminRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> {
-                    log.warn("Admin login failed: email={}, reason={}", maskedEmail, "Admin not found");
+                    log.warn("Admin login failed: email={}, reason={}", maskedEmail,
+                            "Admin not found");
                     return new RuntimeException("Admin not found with email: " + maskedEmail);
                 });
 

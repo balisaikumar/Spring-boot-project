@@ -15,6 +15,7 @@ import com.brinta.hcms.service.ForgotPasswordResetService;
 import com.brinta.hcms.utility.LoggerUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,6 +45,8 @@ public class DoctorController {
 
     @Autowired
     private ForgotPasswordResetService forgotPasswordResetService;
+
+    private static final Class<?> logger = PatientController.class;
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
@@ -173,8 +176,8 @@ public class DoctorController {
             return ResponseEntity.status(404).body(Map.of("error",
                     "No doctor found with given criteria."));
         }
-        log.info("Doctors found with given criteria: {}", doctors.size());
-        return ResponseEntity.ok(doctors);
+        log.info("Doctors found with given criteria: {}", doctor.size());
+        return ResponseEntity.ok(doctor);
     }
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")

@@ -408,11 +408,8 @@ public class DoctorServiceImpl implements DoctorService {
 
     }
 
-
     @Override
     public Page<DoctorAppointmentDto> listAppointments(int page, int size) {
-        log.info("Doctor appointment list request: page={}, size={}", page, size);
-
         if (page < 0 || size <= 0) {
             throw new
                     InvalidRequestException("Page index must not be negative and size must be " +
@@ -424,81 +421,54 @@ public class DoctorServiceImpl implements DoctorService {
                 .orElseThrow(() -> new
                         ResourceNotFoundException("Doctor not found for the logged-in user"));
 
-
         Pageable pageable = PageRequest.of(page, size);
         Page<DoctorAppointment> appointmentPage = doctorAppointmentRepository
                 .findByDoctorId(doctor.getId(), pageable);
-
-        log.info("Fetched {} appointments for doctorId={}, user={}",
-                appointmentPage.getTotalElements(), doctor.getId(), maskedEmail);
 
         return appointmentPage.map(doctorMapper::toDto);
     }
 
     @Override
     public DoctorAppointmentDto rescheduleAppointment(Long appointmentId, LocalDateTime newTime) {
-        User currentUser = securityUtil.getCurrentUser();
-        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
-
-        log.info("Reschedule attempt: appointmentId={}, newTime={}, user={}", appointmentId, newTime, maskedEmail);
+        Long userId = securityUtil.getCurrentUser().getId();
 
         // Fetch the doctor based on userId
         Doctor doctor = doctorRepository.findByUserId(userId)
                 .orElseThrow(() -> new
                         ResourceNotFoundException("Doctor not found for logged-in user"));
 
-
+        // Fetch the appointment using the appointmentId
         DoctorAppointment doctorAppointment = doctorAppointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> {
-                    log.warn("Appointment not found: appointmentId={}, user={}", appointmentId, maskedEmail);
-                    return new ResourceNotFoundException("DoctorAppointment not found");
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("DoctorAppointment not found"));
 
         if (!doctorAppointment.getDoctor().getId().equals(doctor.getId())) {
             throw new
                     RuntimeException("Unauthorized: You can only reschedule your own appointments");
-
         }
 
         doctorAppointment.setAppointmentTime(newTime);
         doctorAppointment.setStatus(AppointmentStatus.RESCHEDULED);
 
-        DoctorAppointment saved = doctorAppointmentRepository.save(doctorAppointment);
-
-        log.info("Rescheduled appointmentId={} to {}, doctorId={}, user={}",
-                appointmentId, newTime, doctor.getId(), maskedEmail);
-
-        return doctorMapper.toDto(saved);
+        return doctorMapper.toDto(doctorAppointmentRepository.save(doctorAppointment));
     }
+
     @Override
     public void cancelAppointment(Long appointmentId) {
-        User currentUser = securityUtil.getCurrentUser();
-        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
-
-        log.info("Cancel appointment request: appointmentId={}, user={}", appointmentId, maskedEmail);
+        Long userId = securityUtil.getCurrentUser().getId();
 
         Doctor doctor = doctorRepository.findByUserId(userId)
                 .orElseThrow(() -> new
                         ResourceNotFoundException("Doctor not found for logged-in user"));
 
-
         DoctorAppointment doctorAppointment = doctorAppointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> {
-                    log.warn("Appointment not found: appointmentId={}, user={}", appointmentId, maskedEmail);
-                    return new ResourceNotFoundException("DoctorAppointment not found");
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("DoctorAppointment not found"));
 
         if (!doctorAppointment.getDoctor().getId().equals(doctor.getId())) {
-            log.warn("Unauthorized cancel attempt: appointmentId={}, doctorId={}, user={}",
-                    appointmentId, doctor.getId(), maskedEmail);
             throw new RuntimeException("Unauthorized: You can only cancel your own appointments");
         }
 
         doctorAppointment.setStatus(AppointmentStatus.CANCELLED);
         doctorAppointmentRepository.save(doctorAppointment);
-
-        log.info("Successfully cancelled appointmentId={} by doctorId={}, user={}",
-                appointmentId, doctor.getId(), maskedEmail);
     }
 
 }
