@@ -132,13 +132,16 @@ public class PatientServiceImpl implements PatientService {
 
     private void validateEmailAndContact(RegisterPatientRequest request) {
         boolean emailExists = patientRepository.existsByEmail(request.getEmail());
-        boolean contactExists = patientRepository.existsByPatientContactNumber(request.getContactNumber());
+        boolean contactExists = patientRepository
+                .existsByPatientContactNumber(request.getContactNumber());
 
         if (emailExists || contactExists) {
             StringBuilder errorMessage = new StringBuilder("Already Exists: ");
-            if (emailExists) errorMessage.append("Email: ").append(LoggerUtil.mask(request.getEmail()));
+            if (emailExists) errorMessage.append("Email: ")
+                    .append(LoggerUtil.mask(request.getEmail()));
             if (emailExists && contactExists) errorMessage.append(" | ");
-            if (contactExists) errorMessage.append("Contact: ").append(LoggerUtil.mask(request.getContactNumber()));
+            if (contactExists) errorMessage.append("Contact: ")
+                    .append(LoggerUtil.mask(request.getContactNumber()));
 
             log.warn("Registration failed due to duplication: {}", errorMessage);
             throw new EmailAlreadyExistsException(errorMessage.toString());
@@ -156,7 +159,8 @@ public class PatientServiceImpl implements PatientService {
 
         User userEntity = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> {
-                    log.warn("Login failed: No user found with email: {}", LoggerUtil.mask(request.getEmail()));
+                    log.warn("Login failed: No user found with email: {}",
+                            LoggerUtil.mask(request.getEmail()));
                     return new RuntimeException("User not found with email: " + request.getEmail());
                 });
 
@@ -182,7 +186,8 @@ public class PatientServiceImpl implements PatientService {
         User currentUser = securityUtil.getCurrentUser();
 
         if (!patient.getUser().getId().equals(currentUser.getId())) {
-            log.warn("Unauthorized update attempt by user ID: {} for patient ID: {}", currentUser.getId(), patientId);
+            log.warn("Unauthorized update attempt by user ID: {} for patient ID: {}",
+                    currentUser.getId(), patientId);
             throw new UnAuthException("You are not authorized to update this patient's details.");
         }
 
@@ -190,8 +195,10 @@ public class PatientServiceImpl implements PatientService {
 
         User user = patient.getUser();
         if (user != null) {
-            if (updatePatientRequest.getName() != null) user.setName(updatePatientRequest.getName());
-            if (updatePatientRequest.getEmail() != null) user.setEmail(updatePatientRequest.getEmail());
+            if (updatePatientRequest.getName() != null)
+                user.setName(updatePatientRequest.getName());
+            if (updatePatientRequest.getEmail() != null)
+                user.setEmail(updatePatientRequest.getEmail());
             userRepository.save(user);
         }
 
@@ -224,7 +231,8 @@ public class PatientServiceImpl implements PatientService {
     public Page<PatientDto> getWithPagination(int page, int size) {
         if (page < 0 || size <= 0) {
             log.warn("Pagination failed: Invalid page index or size.");
-            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
+            throw new InvalidRequestException("Page index must not be negative and " +
+                    "size must be greater than zero.");
         }
 
         Pageable pageable = PageRequest.of(page, size);
@@ -245,8 +253,10 @@ public class PatientServiceImpl implements PatientService {
 
         if (currentUser.getRole().equals(Roles.PATIENT)) {
             if (!patientToDelete.getUser().getId().equals(currentUser.getId())) {
-                log.warn("Unauthorized delete attempt by user ID: {} for patient ID: {}", currentUser.getId(), patientId);
-                throw new UnAuthException("You are not authorized to delete this patient profile.");
+                log.warn("Unauthorized delete attempt by user ID: {} for patient ID: {}",
+                        currentUser.getId(), patientId);
+                throw new
+                        UnAuthException("You are not authorized to delete this patient profile.");
             }
         } else if (!currentUser.getRole().equals(Roles.ADMIN)) {
             log.warn("Unauthorized role attempt for delete by user ID: {}", currentUser.getId());
@@ -257,5 +267,6 @@ public class PatientServiceImpl implements PatientService {
         userRepository.delete(patientToDelete.getUser());
         log.info("Patient and user deleted successfully for patient ID: {}", patientId);
     }
+
 }
 

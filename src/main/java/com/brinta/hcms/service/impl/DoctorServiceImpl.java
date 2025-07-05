@@ -389,12 +389,14 @@ public class DoctorServiceImpl implements DoctorService {
         log.info("Doctor delete attempt by user={} for doctorId={}", maskedEmail, doctorId);
 
         Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Doctor profile not found for " +
+                .orElseThrow(() -> new
+                        ResourceNotFoundException("Doctor profile not found for " +
                         "current user"));
 
 
         if (!currentDoctor.getId().equals(doctorId)) {
-            log.warn("Unauthorized delete attempt: user={} tried to delete doctorId={}", maskedEmail, doctorId);
+            log.warn("Unauthorized delete attempt: user={} tried to delete doctorId={}",
+                    maskedEmail, doctorId);
             throw new UnAuthException("You are not authorized to delete this doctor profile.");
         }
 

@@ -37,16 +37,22 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     public Branch registerBranch(RegisterBranchRequest branchRequest) {
-        log.info("Attempting to register branch: name={}, code={}", branchRequest.getBranchName(), branchRequest.getBranchCode());
+
+        log.info("Attempting to register branch: name={}, code={}", branchRequest.getBranchName(),
+                branchRequest.getBranchCode());
 
         if (branchRepository.existsByBranchCode(branchRequest.getBranchCode())) {
-            log.warn("Branch registration failed: duplicate branch code={}", branchRequest.getBranchCode());
-            throw new DuplicateEntryException("Branch with code " + branchRequest.getBranchCode() + " already exists");
+            log.warn("Branch registration failed: duplicate branch code={}",
+                    branchRequest.getBranchCode());
+            throw new DuplicateEntryException("Branch with code " +
+                    branchRequest.getBranchCode() + " already exists");
         }
 
         if (branchRepository.existsByBranchName(branchRequest.getBranchName())) {
-            log.warn("Branch registration failed: duplicate branch name={}", branchRequest.getBranchName());
-            throw new DuplicateEntryException("Branch with name '" + branchRequest.getBranchName() + "' already exists.");
+            log.warn("Branch registration failed: duplicate branch name={}",
+                    branchRequest.getBranchName());
+            throw new DuplicateEntryException("Branch with name '" +
+                    branchRequest.getBranchName() + "' already exists.");
         }
 
         Branch savedBranch = branchRepository.save(branchMapper.toEntity(branchRequest));
@@ -61,7 +67,8 @@ public class BranchServiceImpl implements BranchService {
 
         if (page < 0 || size <= 0) {
             log.warn("Invalid pagination request: page={}, size={}", page, size);
-            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
+            throw new InvalidRequestException("Page index must not be negative and " +
+                    "size must be greater than zero.");
         }
 
         Pageable pageable = PageRequest.of(page, size);
@@ -72,13 +79,15 @@ public class BranchServiceImpl implements BranchService {
             return Page.empty();
         }
 
-        log.info("Fetched {} branches on page={}", branchPage.getNumberOfElements(), branchPage.getNumber());
+        log.info("Fetched {} branches on page={}", branchPage.getNumberOfElements(),
+                branchPage.getNumber());
         return branchPage;
     }
 
     @Override
     public List<Branch> findBy(Long branchId, String branchCode, String branchName) {
-        log.info("Searching branch by params: id={}, code={}, name={}", branchId, branchCode, branchName);
+        log.info("Searching branch by params: id={}, code={}, name={}", branchId, branchCode,
+                branchName);
 
         if (branchId == null &&
                 (branchCode == null || branchCode.isBlank()) &&
@@ -87,7 +96,8 @@ public class BranchServiceImpl implements BranchService {
             throw new InvalidRequestException("At least one search parameter must be provided");
         }
 
-        Optional<Branch> branch = branchRepository.findByIdOrBranchCodeIgnoreCaseOrBranchName(branchId, branchCode, branchName);
+        Optional<Branch> branch = branchRepository
+                .findByIdOrBranchCodeIgnoreCaseOrBranchName(branchId, branchCode, branchName);
 
         if (branch.isPresent()) {
             log.info("Branch found: id={}, name={}, code={}", branch.get().getId(),

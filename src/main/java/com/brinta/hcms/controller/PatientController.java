@@ -50,11 +50,13 @@ public class PatientController {
 
         try {
             Patient patient = patientService.registerPatientOnline(request);
-            log.info("Online registration successful for email: {}", LoggerUtil.mask(request.getEmail()));
+            log.info("Online registration successful for email: {}",
+                    LoggerUtil.mask(request.getEmail()));
             return ResponseEntity.status(201).body(Map.of("message",
                     "Online patient registered successfully!", "patient", patient));
         } catch (Exception ex) {
-            log.error("Online registration failed for email: {} with error: {}", LoggerUtil.mask(request.getEmail()), ex.getMessage());
+            log.error("Online registration failed for email: {} with error: {}",
+                    LoggerUtil.mask(request.getEmail()), ex.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));
         }
     }
@@ -62,7 +64,8 @@ public class PatientController {
     @PostMapping(value = "/offline-register", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> registerOffline(@RequestBody RegisterPatientRequest request) {
-        log.info("Offline registration attempt by ADMIN for email: {}", LoggerUtil.mask(request.getEmail()));
+        log.info("Offline registration attempt by ADMIN for email: {}",
+                LoggerUtil.mask(request.getEmail()));
 
         try {
             Patient patient = patientService.registerPatientOffline(request);
@@ -71,7 +74,8 @@ public class PatientController {
                     "Offline patient registered successfully by Admin!",
                     "patient", patient));
         } catch (Exception ex) {
-            log.error("Offline registration failed for email: {} with error: {}", LoggerUtil.mask(request.getEmail()), ex.getMessage());
+            log.error("Offline registration failed for email: {} with error: {}",
+                    LoggerUtil.mask(request.getEmail()), ex.getMessage());
             return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));
         }
     }
@@ -84,7 +88,8 @@ public class PatientController {
         return ResponseEntity.ok(tokenPair);
     }
 
-    @Operation(summary = "Forgot Password", description = "Send a password reset link to patient's email")
+    @Operation(summary = "Forgot Password",
+            description = "Send a password reset link to patient's email")
     @ApiResponse(responseCode = "200", description = "Reset link sent to email if user exists")
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
@@ -97,10 +102,13 @@ public class PatientController {
     @GetMapping("/reset-password")
     public ResponseEntity<String> validateResetToken(@RequestParam("token") String token) {
         String result = forgotPasswordResetService.validateResetToken(token);
-        return result.equals("Token is valid.") ? ResponseEntity.ok(result) : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        return result.equals("Token is valid.")
+                ? ResponseEntity.ok(result)
+                : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
     }
 
-    @Operation(summary = "Reset Password", description = "Reset patient's password using the token received via email")
+    @Operation(summary = "Reset Password",
+            description = "Reset patient's password using the token received via email")
     @ApiResponse(responseCode = "200", description = "Password reset successful")
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {

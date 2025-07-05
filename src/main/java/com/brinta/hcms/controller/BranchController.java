@@ -44,7 +44,8 @@ public class BranchController {
                     @ApiResponse(responseCode = "400", description = "Invalid input")
             })
     public ResponseEntity<?> createBranch(@Valid @RequestBody RegisterBranchRequest request) {
-        log.info("Received request to create branch with name={}, code={}", request.getBranchName(), request.getBranchCode());
+        log.info("Received request to create branch with name={}, code={}",
+                request.getBranchName(), request.getBranchCode());
         try {
             Branch savedBranch = branchService.registerBranch(request);
             log.info("Branch created successfully with ID={}", savedBranch.getId());
@@ -69,7 +70,8 @@ public class BranchController {
         log.info("Received request to fetch all branches with page={}, size={}", page, size);
         try {
             Page<Branch> branchPage = branchService.getAllBranches(page, size);
-            log.info("Fetched {} branches on page {}", branchPage.getNumberOfElements(), branchPage.getNumber());
+            log.info("Fetched {} branches on page {}", branchPage.getNumberOfElements(),
+                    branchPage.getNumber());
             return ResponseEntity.ok(Map.of(
                     "branches", branchPage.getContent(),
                     "totalPages", branchPage.getTotalPages(),
@@ -88,7 +90,8 @@ public class BranchController {
     public ResponseEntity<?> findByParams(@RequestParam(required = false) Long branchId,
                                           @RequestParam(required = false) String branchCode,
                                           @RequestParam(required = false) String branchName) {
-        log.info("Received request to find branch by branchId={}, branchCode={}, branchName={}", branchId, branchCode, branchName);
+        log.info("Received request to find branch by branchId={}, branchCode={}, branchName={}",
+                branchId, branchCode, branchName);
         try {
             List<Branch> branches = branchService.findBy(branchId, branchCode, branchName);
             if (branches.isEmpty()) {
@@ -125,7 +128,8 @@ public class BranchController {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("Failed to update branch with ID={}: {}", id, e.getMessage(), e);
-            return ResponseEntity.status(400).body(Map.of("error", "Failed to update branch: " + e.getMessage()));
+            return ResponseEntity.status(400)
+                    .body(Map.of("error", "Failed to update branch: " + e.getMessage()));
         }
     }
 

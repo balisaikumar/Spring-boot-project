@@ -84,7 +84,8 @@ public class AdminServiceImpl implements AdminService {
             if (emailExists && contactExists) errorMessage.append(" | ");
             if (contactExists) errorMessage.append("Contact: ").append(maskedContact);
 
-            log.warn("Admin registration failed due to duplicate entry: {}", errorMessage.toString());
+            log.warn("Admin registration failed due to duplicate entry: {}",
+                    errorMessage.toString());
             throw new DuplicateEntryException(errorMessage.toString());
         }
 
@@ -129,7 +130,8 @@ public class AdminServiceImpl implements AdminService {
                 });
 
         if (admin.getUser() == null || admin.getUser().getPassword() == null) {
-            log.error("Admin login failed: email={}, reason={}", maskedEmail, "Missing credentials");
+            log.error("Admin login failed: email={}, reason={}",
+                    maskedEmail, "Missing credentials");
             throw new RuntimeException("User credentials are missing for admin: " + maskedEmail);
         }
 
@@ -139,7 +141,8 @@ public class AdminServiceImpl implements AdminService {
         }
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(admin.getUser().getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(admin.getUser().getEmail(),
+                        request.getPassword())
         );
 
         log.info("Admin logged in successfully: email={}", maskedEmail);
@@ -152,7 +155,8 @@ public class AdminServiceImpl implements AdminService {
 
         if (page < 0 || size <= 0) {
             log.warn("Invalid pagination parameters: page={}, size={}", page, size);
-            throw new InvalidRequestException("Page index must not be negative and size must be greater than zero.");
+            throw new InvalidRequestException("Page index must not be negative and size " +
+                    "must be greater than zero.");
         }
 
         Pageable pageable = PageRequest.of(page, size);
@@ -178,7 +182,8 @@ public class AdminServiceImpl implements AdminService {
         if (currentUser.getRole() == Roles.SUPER_ADMIN) {
             Admin admin = adminRepo.findById(adminId)
                     .orElseThrow(() -> {
-                        log.warn("Admin delete failed: Admin ID {} not found (by SUPER_ADMIN)", adminId);
+                        log.warn("Admin delete failed: Admin ID {} not found (by SUPER_ADMIN)",
+                                adminId);
                         return new ResourceNotFoundException("Admin not found");
                     });
 
@@ -190,8 +195,10 @@ public class AdminServiceImpl implements AdminService {
         if (currentUser.getRole() == Roles.ADMIN) {
             Admin admin = adminRepo.findByUserId(currentUser.getId())
                     .orElseThrow(() -> {
-                        log.error("Delete failed: Admin profile not found for userId={}", currentUser.getId());
-                        return new ResourceNotFoundException("Admin profile not linked to current user");
+                        log.error("Delete failed: Admin profile not found for userId={}",
+                                currentUser.getId());
+                        return new ResourceNotFoundException("Admin profile not linked to " +
+                                "current user");
                     });
 
             if (!admin.getId().equals(adminId)) {
@@ -201,7 +208,8 @@ public class AdminServiceImpl implements AdminService {
             }
 
             adminRepo.delete(admin);
-            log.info("Admin deleted their own profile: adminId={}, userId={}", adminId, currentUser.getId());
+            log.info("Admin deleted their own profile: adminId={}, userId={}", adminId,
+                    currentUser.getId());
             return;
         }
 
