@@ -112,7 +112,7 @@ public class PatientController {
     @ApiResponse(responseCode = "200", description = "Password reset successful")
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        log.info( "Reset password API called with token: {}", request.getToken());
+        log.info("Reset password API called with token: {}", request.getToken());
         forgotPasswordResetService.resetPassword(request);
         return ResponseEntity.ok("Password reset successful.");
     }
@@ -121,10 +121,10 @@ public class PatientController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updatePatient(@PathVariable Long id, @Valid @RequestBody
     UpdatePatientRequest updatePatientRequest) {
-        log.info( "Update attempt for patient ID: {}", id);
+        log.info("Update attempt for patient ID: {}", id);
         try {
             Patient updatedPatient = patientService.update(id, updatePatientRequest);
-            log.info( "Update successful for patient ID: {}", id);
+            log.info("Update successful for patient ID: {}", id);
             return ResponseEntity.ok(Map.of("message", "Patient updated successfully!",
                     "patient", updatedPatient));
         } catch (ResourceNotFoundException exception) {
@@ -152,10 +152,10 @@ public class PatientController {
             List<PatientDto> patient = patientService.findBy(patientId, contactNumber, email);
             return ResponseEntity.ok(patient);
         } catch (ResourceNotFoundException ex) {
-            log.error( "FindBy failed: {}", ex.getMessage());
+            log.error("FindBy failed: {}", ex.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", ex.getMessage()));
         } catch (Exception ex) {
-           log.error( "Unexpected error occurred: {}", ex.getMessage());
+            log.error("Unexpected error occurred: {}", ex.getMessage());
             return ResponseEntity.status(500).body(Map.of("error",
                     "Something went wrong"));
         }
@@ -179,11 +179,11 @@ public class PatientController {
         log.info("Delete attempt for patient ID: {}", patientId);
         try {
             patientService.delete(patientId);
-           log.info( "Deletion successful for patient ID: {}",
+            log.info("Deletion successful for patient ID: {}",
                     patientId);
             return ResponseEntity.ok(Map.of("message", "Patient Deleted successfully!"));
         } catch (ResourceNotFoundException exception) {
-            log.error( "Delete failed: {}", exception.getMessage());
+            log.error("Delete failed: {}", exception.getMessage());
             return ResponseEntity.status(404).body(Map.of("error", exception.getMessage()));
         }
     }

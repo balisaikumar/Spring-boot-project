@@ -2,6 +2,7 @@ package com.brinta.hcms.mapper;
 
 import com.brinta.hcms.dto.ReferralDto;
 import com.brinta.hcms.entity.Referral;
+import com.brinta.hcms.enums.AgentType;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.NullValuePropertyMappingStrategy;
@@ -19,8 +20,16 @@ public interface ReferralMapper {
     @Mapping(source = "patient.contactNumber", target = "patientContactNumber")
     ReferralDto createReferral(Referral referral);
 
-    // List of entities to DTOs
     List<ReferralDto> createReferralList(List<Referral> referrals);
+
+    // Added conditional mapping to nullify agentName if agent is EXTERNAL_DOCTOR
+    default ReferralDto createReferralWithAgentType(Referral referral, AgentType agentType) {
+        ReferralDto dto = createReferral(referral);
+        if (agentType == AgentType.EXTERNAL_DOCTOR) {
+            dto.setAgentName(null);
+        }
+        return dto;
+    }
 
 }
 

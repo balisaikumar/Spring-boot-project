@@ -1,7 +1,6 @@
 package com.brinta.hcms.repository;
 
 import com.brinta.hcms.entity.Agent;
-import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.Referral;
 import com.brinta.hcms.enums.AgentType;

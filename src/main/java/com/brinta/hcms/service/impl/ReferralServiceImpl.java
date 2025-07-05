@@ -8,7 +8,10 @@ import com.brinta.hcms.entity.Referral;
 import com.brinta.hcms.enums.AgentType;
 import com.brinta.hcms.enums.PatientRegistrationStatus;
 import com.brinta.hcms.enums.ProfileStatus;
-import com.brinta.hcms.exception.exceptionHandler.*;
+import com.brinta.hcms.exception.exceptionHandler.DuplicateEntryException;
+import com.brinta.hcms.exception.exceptionHandler.NoReferralFoundException;
+import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
+import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.PatientMapper;
 import com.brinta.hcms.mapper.ReferralMapper;
 import com.brinta.hcms.repository.DoctorRepository;
@@ -140,9 +143,12 @@ public class ReferralServiceImpl implements ReferralService {
         );
 
         Referral savedReferral = referralRepository.save(referral);
-        LoggerUtil.info(logger, "Referral [{}] created by agent [{}]", savedReferral.getId(), agent.getId());
+        LoggerUtil.info(logger, "Referral [{}] created by agent [{}]",
+                savedReferral.getId(), agent.getId());
 
-        ReferralDto dto = referralMapper.createReferral(savedReferral);
+        // Use enhanced mapper method that nullifies agentName for EXTERNAL_DOCTOR
+        ReferralDto dto = referralMapper
+                .createReferralWithAgentType(savedReferral, agent.getAgentType());
         dto.setProfileStatus(referral.getProfileStatus());
         return dto;
     }

@@ -58,16 +58,16 @@ public class AdminController {
             @ApiResponse(description = "Email or contact already exists", responseCode = "400")
     })
     public ResponseEntity<?> registerAdmin(@Valid @RequestBody
-                                               RegisterAdminRequest registerAdminRequest) {
+                                           RegisterAdminRequest registerAdminRequest) {
         String maskedEmail = LoggerUtil.mask(registerAdminRequest.getEmail());
         String maskedContact = LoggerUtil.mask(registerAdminRequest.getContactNumber());
 
-        log.info( "Received request to register admin with email={}, contact={}",
+        log.info("Received request to register admin with email={}, contact={}",
                 maskedEmail, maskedContact);
 
         try {
             Admin admin = adminService.registerAdmin(registerAdminRequest);
-            log.info( "Admin registered successfully: username={}, email={}",
+            log.info("Admin registered successfully: username={}, email={}",
                     registerAdminRequest.getUserName(), maskedEmail);
 
             return ResponseEntity.status(201).body(Map.of(
@@ -75,7 +75,7 @@ public class AdminController {
                     "admin", admin
             ));
         } catch (DuplicateEntryException e) {
-            log.warn( "Admin registration failed due to duplicate entry: {}", e.getMessage());
+            log.warn("Admin registration failed due to duplicate entry: {}", e.getMessage());
             return ResponseEntity.status(409).body(Map.of("error", e.getMessage()));
         }
     }
@@ -110,7 +110,7 @@ public class AdminController {
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
                                                  HttpServletRequest httpRequest) {
-        log.info( "Forgot password API called for email: {}", request.getEmail());
+        log.info("Forgot password API called for email: {}", request.getEmail());
         forgotPasswordResetService.forgotPassword(request, httpRequest);
         return ResponseEntity.ok("Password reset link sent to your registered email.");
     }
@@ -128,7 +128,7 @@ public class AdminController {
     @ApiResponse(responseCode = "200", description = "Password reset successful")
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        log.info( "Reset password API called with token: {}", request.getToken());
+        log.info("Reset password API called with token: {}", request.getToken());
         forgotPasswordResetService.resetPassword(request);
         return ResponseEntity.ok("Password reset successful.");
     }
@@ -142,7 +142,7 @@ public class AdminController {
             @ApiResponse(description = "Email or phone already exists", responseCode = "400")
     })
     public ResponseEntity<?> registerInternalDoctor(@Valid @RequestBody
-                                                        RegisterDoctorRequest registerDoctor) {
+                                                    RegisterDoctorRequest registerDoctor) {
         try {
             LoggerUtil.info(getClass(), "Registering internal doctor with email: {}",
                     registerDoctor.getEmail());
@@ -173,7 +173,7 @@ public class AdminController {
             @ApiResponse(description = "Unexpected server error", responseCode = "500")
     })
     public ResponseEntity<?> registerExternalDoctor(@Valid @RequestBody
-                                                        RegisterDoctorRequest registerDoctor) {
+                                                    RegisterDoctorRequest registerDoctor) {
         try {
             LoggerUtil.info(getClass(),
                     "Registering external doctor with email: {}", registerDoctor.getEmail());

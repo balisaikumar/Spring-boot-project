@@ -37,4 +37,6 @@ public class EmailServiceImpl implements EmailService {
         log.info("{}: Email sent successfully to {}", logger, to);
 
     }
+
 }
+

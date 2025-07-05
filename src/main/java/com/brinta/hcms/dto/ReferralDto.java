@@ -23,4 +23,6 @@ public class ReferralDto {
     private String area;
 
     private ProfileStatus profileStatus;
+
 }
+

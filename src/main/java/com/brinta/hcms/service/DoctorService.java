@@ -35,3 +35,4 @@ public interface DoctorService {
     void cancelAppointment(Long appointmentId);
 
 }
+

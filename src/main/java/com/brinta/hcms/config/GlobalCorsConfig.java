@@ -26,4 +26,6 @@ public class GlobalCorsConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
+
 }
+

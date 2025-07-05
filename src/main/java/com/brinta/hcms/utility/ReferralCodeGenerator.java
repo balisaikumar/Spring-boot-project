@@ -38,4 +38,6 @@ public class ReferralCodeGenerator {
 
         return prefix + year + "_" + name + "_" + random;
     }
+
 }
+

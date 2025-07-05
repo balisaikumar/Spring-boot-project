@@ -16,3 +16,4 @@ public class GenericResponse {
     private String message;
 
 }
+

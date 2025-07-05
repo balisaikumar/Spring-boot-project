@@ -52,4 +52,6 @@ public class SecurityUtil {
         }
         throw new UsernameNotFoundException("Current authenticated entity is not an Agent");
     }
+
 }
+

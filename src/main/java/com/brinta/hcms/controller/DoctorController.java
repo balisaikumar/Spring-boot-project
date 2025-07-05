@@ -5,6 +5,7 @@ import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
+import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.request.ForgotPasswordRequest;
 import com.brinta.hcms.request.ResetPasswordRequest;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
@@ -40,13 +41,11 @@ import java.util.Map;
 @AllArgsConstructor
 public class DoctorController {
 
+    private static final Class<?> logger = PatientController.class;
     @Autowired
     private DoctorService doctorService;
-
     @Autowired
     private ForgotPasswordResetService forgotPasswordResetService;
-
-    private static final Class<?> logger = PatientController.class;
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
@@ -58,12 +57,12 @@ public class DoctorController {
                             responseCode = "200",
                             description = "Login successful",
                             content = @Content(schema = @Schema(example = """
-                                {
-                                  "accessToken": "jwt-access-token",
-                                  "refreshToken": "jwt-refresh-token",
-                                  "role": "INTERNAL_DOCTOR | EXTERNAL_DOCTOR"
-                                }
-                            """))
+                                        {
+                                          "accessToken": "jwt-access-token",
+                                          "refreshToken": "jwt-refresh-token",
+                                          "role": "INTERNAL_DOCTOR | EXTERNAL_DOCTOR"
+                                        }
+                                    """))
                     ),
                     @ApiResponse(
                             responseCode = "400",
@@ -137,22 +136,43 @@ public class DoctorController {
     }
 
     @PutMapping(value = "/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('ADMIN', 'EXTERNAL_DOCTOR')")
-    @Operation(summary = "Update Doctor", responses = {@ApiResponse
-            (description = "Doctor details updated successfully",
-                    responseCode = "200", content = @Content(schema = @Schema
-                    (implementation = Doctor.class))),
-            @ApiResponse(description = "Doctor not found", responseCode = "404"),
-            @ApiResponse(description = "Invalid input data", responseCode = "400")})
-    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @Valid @RequestBody
-    UpdateDoctorRequest updateDoctorRequest) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+            summary = "Update Internal Doctor by Admin",
+            description = "Only ADMIN can update internal doctor details. " +
+                    "External doctors must use agent update API.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Doctor details updated successfully",
+                            content = @Content(schema = @Schema(implementation = Doctor.class))
+                    ),
+                    @ApiResponse(responseCode = "404", description = "Doctor not found"),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized access"),
+                    @ApiResponse(responseCode = "500", description = "Unexpected error")
+            }
+    )
+    public ResponseEntity<?> updateDoctor(@PathVariable Long id,
+                                          @Valid @RequestBody
+                                          UpdateDoctorRequest updateDoctorRequest) {
         try {
             Doctor updatedDoctor = doctorService.update(id, updateDoctorRequest);
-            return ResponseEntity.ok(Map.of("message", "Doctor updated successfully!",
+            return ResponseEntity.ok(Map.of(
+                    "message", "Doctor updated successfully!",
                     "doctor", updatedDoctor));
-        } catch (ResourceNotFoundException exception) {
-            log.warn("Update failed: {}", exception.getMessage());
-            return ResponseEntity.status(404).body(Map.of("error", exception.getMessage()));
+        } catch (ResourceNotFoundException e) {
+            log.warn("Update failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (UnAuthException ex) {
+            log.warn("Unauthorized update attempt: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", ex.getMessage()));
+        } catch (Exception e) {
+            log.error("Unexpected error during doctor update", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error",
+                            "An unexpected error occurred while updating the doctor."));
         }
     }
 
@@ -180,6 +200,7 @@ public class DoctorController {
         log.info("Doctors found with given criteria: {}", doctor.size());
         return ResponseEntity.ok(doctor);
     }
+
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get All Doctors With Pagination",
@@ -202,27 +223,38 @@ public class DoctorController {
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('ADMIN', 'EXTERNAL_DOCTOR')")
-    @Operation(summary = "Delete Doctor",
+    @PreAuthorize("hasRole('ADMIN')") // Only ADMINs can delete doctors
+    @Operation(summary = "Delete Internal Doctor",
             responses = {
-                    @ApiResponse(responseCode = "204", description = "Doctor Deleted Successfully"),
-                    @ApiResponse(responseCode = "400", description = "Enter input field"),
-                    @ApiResponse(responseCode = "404", description = "Enter the correct ID")
+                    @ApiResponse(responseCode = "200", description = "Doctor deleted successfully"),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized access"),
+                    @ApiResponse(responseCode = "404", description = "Doctor not found")
             })
-
     public ResponseEntity<?> deleteDoctorById(@PathVariable("id") Long doctorId) {
-        log.info("Attempting to delete doctor profile with ID: {}", doctorId);
+        LoggerUtil.info(getClass(), "ADMIN attempting to delete doctor with ID: {}", doctorId);
         try {
             doctorService.delete(doctorId);
-            log.info("Doctor profile deleted successfully for ID: {}", doctorId);
+            LoggerUtil.info(getClass(), "Doctor deleted successfully with ID: {}", doctorId);
             return ResponseEntity.ok(Map.of("message", "Doctor deleted successfully!"));
-        } catch (ResourceNotFoundException exception) {
-            log.warn("Delete failed: {}", exception.getMessage());
-            return ResponseEntity.status(404).body(Map.of("error", exception.getMessage()));
+        } catch (ResourceNotFoundException ex) {
+            LoggerUtil.warn(getClass(),
+                    "Doctor delete failed - not found: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", ex.getMessage()));
+        } catch (UnAuthException ex) {
+            LoggerUtil.warn(getClass(),
+                    "Unauthorized delete attempt: {}", ex.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", ex.getMessage()));
+        } catch (Exception ex) {
+            LoggerUtil.error(getClass(),
+                    "Unexpected error while deleting doctor ID={}", doctorId, ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Something went wrong while deleting the doctor."));
         }
     }
 
-    @GetMapping(value = "/appointments",produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/appointments", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('DOCTOR')")
 
     @Operation(summary = "List appointments for the doctor", responses = {
@@ -251,7 +283,7 @@ public class DoctorController {
         }
     }
 
-    @PutMapping(value = "/rescheduleAppointment/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/rescheduleAppointment/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Reschedule a doctor appointment", responses = {
             @ApiResponse(responseCode = "200", description = "Appointment rescheduled successfully"),
@@ -277,14 +309,13 @@ public class DoctorController {
         }
     }
 
-    @DeleteMapping(value = "/cancelAppointment/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @DeleteMapping(value = "/cancelAppointment/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Cancel a doctor appointment", responses = {
             @ApiResponse(responseCode = "200", description = "Appointment cancelled successfully"),
             @ApiResponse(responseCode = "404", description = "Appointment not found",
                     content = @Content)
     })
-
     public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
         log.info("Cancel appointment request received for ID: {}", id);
         try {
@@ -292,9 +323,10 @@ public class DoctorController {
             log.info("Appointment ID: {} cancelled successfully", id);
             return ResponseEntity
                     .ok(Map.of("message", "Appointment cancelled successfully"));
-        } catch (RuntimeException e) {
-            log.warn("Failed to cancel appointment ID: {} - Reason: {}", id, e.getMessage());
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException ex) {
+            log.warn("Failed to cancel appointment ID: {} - Reason: {}", id, ex.getMessage());
+            return ResponseEntity.status(404)
+                    .body(Map.of("error", ex.getMessage()));
         }
     }
 

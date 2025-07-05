@@ -101,7 +101,9 @@ public class DoctorServiceImpl implements DoctorService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(Roles.DOCTOR);
+        user.setName(request.getName());
         userRepository.save(user);
+
         LoggerUtil.debug(getClass(),
                 "Internal doctor user created: {}", request.getEmail());
 
@@ -262,69 +264,40 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public Doctor update(Long doctorId, UpdateDoctorRequest updateDoctorRequest) {
-        Object actor = securityUtil.getCurrentActor();
 
-        if (actor instanceof User user) {
-            // Internal Doctor
-            Doctor currentDoctor = doctorRepository.findByUserId(user.getId())
-                    .orElseThrow(() -> new
-                            ResourceNotFoundException("Doctor profile not found for current user"));
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new
+                        ResourceNotFoundException("Doctor with ID " + doctorId + " not found."));
 
-            if (!currentDoctor.getId().equals(doctorId)) {
-                throw new
-                        UnAuthException("You are not authorized to update this doctor's profile.");
-            }
-
-            // Update user info
-            if (updateDoctorRequest.getName() != null)
-                user.setName(updateDoctorRequest.getName());
-            if (updateDoctorRequest.getEmail() != null)
-                user.setEmail(updateDoctorRequest.getEmail());
-            userRepository.save(user);
-
-            // Update doctor info
-            doctorMapper.update(updateDoctorRequest, currentDoctor);
-            return doctorRepository.save(currentDoctor);
-
-        } else if (actor instanceof Agent agent && agent.getAgentType() ==
-                AgentType.EXTERNAL_DOCTOR) {
-            // External Doctor (stored only in Agent)
-            Doctor doctor = doctorRepository.findByEmail(agent.getEmail())
-                    .orElseThrow(() -> new
-                            ResourceNotFoundException("Doctor profile not found for external doctor"));
-
-            if (!doctor.getId().equals(doctorId)) {
-                throw new
-                        UnAuthException("You are not authorized to update this doctor's profile.");
-            }
-
-            // Update Agent fields
-            if (updateDoctorRequest.getName() != null)
-                agent.setName(updateDoctorRequest.getName());
-            if (updateDoctorRequest.getEmail() != null)
-                agent.setEmail(updateDoctorRequest.getEmail());
-            if (updateDoctorRequest.getContactNumber() != null)
-                agent.setContactNumber(updateDoctorRequest.getContactNumber());
-            agentRepository.save(agent);
-
-            // Update Doctor fields (mapped separately)
-            doctorMapper.update(updateDoctorRequest, doctor);
-
-            // Manually update specific fields in doctor entity if needed
-            if (updateDoctorRequest.getEmail() != null) {
-                doctor.setEmail(updateDoctorRequest.getEmail());
-            }
-            if (updateDoctorRequest.getName() != null) {
-                doctor.setName(updateDoctorRequest.getName());
-            }
-
-            return doctorRepository.save(doctor);
-
-        } else {
-            throw new UnAuthException("You are not authorized to update this doctor's profile.");
+        // Ensure the doctor is internal (i.e., has a user)
+        if (doctor.getUser() == null) {
+            LoggerUtil.warn(getClass(),
+                    "Attempted to update external doctor [{}] via internal doctor " +
+                            "update API.", doctorId);
+            throw new UnAuthException("External doctors cannot be updated via this route. " +
+                    "Use agent update instead.");
         }
-    }
 
+        User user = doctor.getUser();
+
+        // Update user fields
+        if (updateDoctorRequest.getName() != null)
+            user.setName(updateDoctorRequest.getName());
+        if (updateDoctorRequest.getEmail() != null)
+            user.setEmail(updateDoctorRequest.getEmail());
+
+        userRepository.save(user);
+
+        // Update doctor fields
+        doctorMapper.update(updateDoctorRequest, doctor);
+        doctor.setUser(user); // Ensure user is re-set in case of object refresh
+
+        Doctor updatedDoctor = doctorRepository.save(doctor);
+
+        LoggerUtil.info(getClass(),
+                "Internal doctor [{}] updated successfully by admin.", doctorId);
+        return updatedDoctor;
+    }
 
     @Override
     public List<DoctorDto> findBy(Long doctorId, String contactNumber, String email) {
@@ -383,35 +356,55 @@ public class DoctorServiceImpl implements DoctorService {
     @Override
     public void delete(Long doctorId) {
 
-        // Get currently logged-in user
+        // Get the current authenticated actor
+        Object actor = securityUtil.getCurrentActor();
 
-        User currentUser = securityUtil.getCurrentUser();
-        String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
-
-        log.info("Doctor delete attempt by user={} for doctorId={}", maskedEmail, doctorId);
-
-        Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
-                .orElseThrow(() -> new
-                        ResourceNotFoundException("Doctor profile not found for " +
-                        "current user"));
-
-
-        if (!currentDoctor.getId().equals(doctorId)) {
-            log.warn("Unauthorized delete attempt: user={} tried to delete doctorId={}",
-                    maskedEmail, doctorId);
-            throw new UnAuthException("You are not authorized to delete this doctor profile.");
+        if (actor instanceof Agent agent && agent.getAgentType() == AgentType.EXTERNAL_DOCTOR) {
+            LoggerUtil.warn(getClass(),
+                    "Unauthorized delete attempt by external doctor agent with email: {}",
+                    LoggerUtil.mask(agent.getEmail()));
+            throw new UnAuthException("External doctors cannot delete profile via this route. " +
+                    "Please contact the admin or use appropriate support.");
         }
 
-        // Delete the associated Agent (if exists)
-        Optional<Agent> agentOpt = agentRepository.findByEmail(currentUser.getEmail());
-        agentOpt.ifPresent(agentRepository::delete);
+        if (actor instanceof User currentUser) {
+            String maskedEmail = LoggerUtil.mask(currentUser.getEmail());
+            LoggerUtil.info(getClass(), "Doctor delete attempt by user={} for doctorId={}",
+                    maskedEmail, doctorId);
 
-        // Delete the doctor and associated user
-        doctorRepository.delete(currentDoctor); // First delete doctor
-        userRepository.delete(currentUser);     // Then delete linked user
+            Doctor currentDoctor = doctorRepository.findByUserId(currentUser.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Doctor profile not found for current user"));
 
+            if (!currentDoctor.getId().equals(doctorId)) {
+                LoggerUtil.warn(getClass(),
+                        "Unauthorized delete attempt: user={} tried to delete doctorId={}",
+                        maskedEmail, doctorId);
+                throw new UnAuthException("You are not authorized to delete this doctor profile.");
+            }
+
+            // Delete any linked agent (optional cleanup)
+            agentRepository.findByEmail(currentUser.getEmail()).ifPresent(agent -> {
+                agentRepository.delete(agent);
+                LoggerUtil.debug(getClass(),
+                        "Linked agent deleted for internal doctor: {}", maskedEmail);
+            });
+
+            doctorRepository.delete(currentDoctor); // First delete doctor
+            userRepository.delete(currentUser);     // Then delete linked user
+
+            LoggerUtil.info(getClass(),
+                    "Internal doctor with ID [{}] and user [{}] deleted successfully.",
+                    doctorId, maskedEmail);
+
+        } else {
+            LoggerUtil.warn(getClass(),
+                    "Unauthorized actor tried to delete doctor profile.");
+            throw new
+                    UnAuthException("Unauthorized access. Only internal doctors can delete " +
+                    "this profile.");
+        }
     }
-
 
     @Override
     public Page<DoctorAppointmentDto> listAppointments(int page, int size) {

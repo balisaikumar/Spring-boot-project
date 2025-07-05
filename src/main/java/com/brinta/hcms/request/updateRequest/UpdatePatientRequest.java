@@ -20,3 +20,4 @@ public class UpdatePatientRequest {
     private String contactNumber;
 
 }
+

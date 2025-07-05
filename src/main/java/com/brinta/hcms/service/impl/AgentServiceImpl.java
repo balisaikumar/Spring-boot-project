@@ -113,12 +113,12 @@ public class AgentServiceImpl implements AgentService {
         LoggerUtil.info(getClass(), "Agent login attempt for email: {}",
                 request.getEmail());
 
-        // Commit: [VALIDATION] Basic input checks
+        // [VALIDATION] Basic input checks
         if (request.getEmail() == null || request.getPassword() == null) {
             throw new IllegalArgumentException("Email and password are required");
         }
 
-        // Commit: [FETCH] Find agent by email
+        // [FETCH] Find agent by email
         Agent agent = agentRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> {
                     LoggerUtil.warn(getClass(),
@@ -126,19 +126,19 @@ public class AgentServiceImpl implements AgentService {
                     return new UnAuthException("Invalid email or password");
                 });
 
-        // Commit: [AUTH] Validate password
+        // [AUTH] Validate password
         if (!passwordEncoder.matches(request.getPassword(), agent.getPassword())) {
             LoggerUtil.warn(getClass(),
                     "Login failed due to incorrect password for: {}", request.getEmail());
             throw new UnAuthException("Invalid email or password");
         }
 
-        // Commit: [SPRING SECURITY] Authenticate user
+        // [SPRING SECURITY] Authenticate user
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        // Commit: [JWT] Generate tokens
+        // [JWT] Generate tokens
         TokenPair tokenPair = jwtService.generateTokenPair(authentication);
 
         LoggerUtil.info(getClass(),
@@ -150,9 +150,8 @@ public class AgentServiceImpl implements AgentService {
         );
     }
 
-    @Override
+    // Update any agent (External Doctor included) + Sync with Doctor if external doctor
     public Agent updateAgent(Long agentId, AgentUpdate updateRequest) {
-
         Agent currentAgent = securityUtil.getCurrentAgent();
         if (currentAgent == null) {
             throw new UnAuthException("You must be logged in to update your profile.");
@@ -162,7 +161,6 @@ public class AgentServiceImpl implements AgentService {
             throw new UnAuthException("You are not authorized to update another agent's profile.");
         }
 
-        // Validation checks
         if (updateRequest.getEmail() != null &&
                 !updateRequest.getEmail().equals(currentAgent.getEmail()) &&
                 agentRepository.existsByEmail(updateRequest.getEmail())) {
@@ -171,26 +169,28 @@ public class AgentServiceImpl implements AgentService {
         }
 
         if (updateRequest.getContactNumber() != null &&
-                !updateRequest.getContactNumber()
-                        .equals(currentAgent.getContactNumber()) &&
+                !updateRequest.getContactNumber().equals(currentAgent.getContactNumber()) &&
                 agentRepository.existsByContactNumber(updateRequest.getContactNumber())) {
-            throw new DuplicateEntryException("Contact number '" + updateRequest.getContactNumber() + "' is already in use.");
+            throw new DuplicateEntryException("Contact number '"
+                    + updateRequest.getContactNumber() + "' is already in use.");
         }
 
-        // Apply agent updates
-        if (updateRequest.getName() != null) currentAgent.setName(updateRequest.getName());
-        if (updateRequest.getEmail() != null) currentAgent.setEmail(updateRequest.getEmail());
+        // Update agent details
+        if (updateRequest.getName() != null)
+            currentAgent.setName(updateRequest.getName());
+        if (updateRequest.getEmail() != null)
+            currentAgent.setEmail(updateRequest.getEmail());
         if (updateRequest.getContactNumber() != null)
             currentAgent.setContactNumber(updateRequest.getContactNumber());
 
         Agent updatedAgent = agentRepository.save(currentAgent);
+        LoggerUtil.info(getClass(),
+                "Agent with ID [{}] updated successfully.", updatedAgent.getId());
 
-        // --- [NEW] Sync with Doctor if EXTERNAL_DOCTOR ---
         if (updatedAgent.getAgentType() == AgentType.EXTERNAL_DOCTOR) {
             Optional<Doctor> doctorOpt = doctorRepository.findByAgent(updatedAgent);
             if (doctorOpt.isPresent()) {
                 Doctor doctor = doctorOpt.get();
-
                 if (updateRequest.getName() != null)
                     doctor.setName(updateRequest.getName());
                 if (updateRequest.getEmail() != null)
@@ -200,10 +200,12 @@ public class AgentServiceImpl implements AgentService {
 
                 doctorRepository.save(doctor);
                 LoggerUtil.info(getClass(),
-                        "Synced external doctor data with updated agent ID: {}", agentId);
+                        "Synced external doctor data with agent ID [{}]",
+                        updatedAgent.getId());
             } else {
                 LoggerUtil.warn(getClass(),
-                        "No matching doctor found to sync for agent ID: {}", agentId);
+                        "No matching doctor found to sync for agent ID [{}]",
+                        updatedAgent.getId());
             }
         }
 

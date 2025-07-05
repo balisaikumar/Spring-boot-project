@@ -35,3 +35,4 @@ public interface PatientRepository extends JpaRepository<Patient, Long> {
     Optional<Patient> findByContactNumber(String contactNumber);
 
 }
+

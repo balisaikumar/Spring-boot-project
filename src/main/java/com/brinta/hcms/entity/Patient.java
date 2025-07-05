@@ -50,3 +50,4 @@ public class Patient {
     private ProfileStatus profileStatus;
 
 }
+

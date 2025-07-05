@@ -15,4 +15,6 @@ public class CorsConfig {
 //                .allowedHeaders("*")
 //                .allowCredentials(true);
 //    }
+
 }
+

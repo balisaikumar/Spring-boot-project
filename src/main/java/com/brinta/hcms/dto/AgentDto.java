@@ -21,3 +21,4 @@ public class AgentDto {
     private AgentType agentType;
 
 }
+
