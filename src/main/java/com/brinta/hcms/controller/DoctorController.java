@@ -137,7 +137,7 @@ public class DoctorController {
     }
 
     @PutMapping(value = "/update/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('DOCTOR', 'EXTERNAL_DOCTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EXTERNAL_DOCTOR')")
     @Operation(summary = "Update Doctor", responses = {@ApiResponse
             (description = "Doctor details updated successfully",
                     responseCode = "200", content = @Content(schema = @Schema
@@ -171,6 +171,7 @@ public class DoctorController {
     public ResponseEntity<?> findByParams(@RequestParam(required = false) Long doctorId,
                                           @RequestParam(required = false) String contactNumber,
                                           @RequestParam(required = false) String email) {
+
         List<DoctorDto> doctor = doctorService.findBy(doctorId, contactNumber, email);
         if (doctor.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of("error",
@@ -201,7 +202,7 @@ public class DoctorController {
     }
 
     @DeleteMapping(value = "/delete/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('DOCTOR', 'EXTERNAL_DOCTOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EXTERNAL_DOCTOR')")
     @Operation(summary = "Delete Doctor",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Doctor Deleted Successfully"),
@@ -251,7 +252,7 @@ public class DoctorController {
     }
 
     @PutMapping(value = "/rescheduleAppointment/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Reschedule a doctor appointment", responses = {
             @ApiResponse(responseCode = "200", description = "Appointment rescheduled successfully"),
             @ApiResponse(responseCode = "404", description = "Appointment not found",
@@ -277,12 +278,13 @@ public class DoctorController {
     }
 
     @DeleteMapping(value = "/cancelAppointment/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Cancel a doctor appointment", responses = {
             @ApiResponse(responseCode = "200", description = "Appointment cancelled successfully"),
             @ApiResponse(responseCode = "404", description = "Appointment not found",
                     content = @Content)
     })
+
     public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
         log.info("Cancel appointment request received for ID: {}", id);
         try {

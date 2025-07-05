@@ -325,6 +325,7 @@ public class DoctorServiceImpl implements DoctorService {
         }
     }
 
+
     @Override
     public List<DoctorDto> findBy(Long doctorId, String contactNumber, String email) {
         String maskedContact = LoggerUtil.mask(contactNumber);
@@ -381,6 +382,7 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     public void delete(Long doctorId) {
+
         // Get currently logged-in user
 
         User currentUser = securityUtil.getCurrentUser();
@@ -409,6 +411,7 @@ public class DoctorServiceImpl implements DoctorService {
         userRepository.delete(currentUser);     // Then delete linked user
 
     }
+
 
     @Override
     public Page<DoctorAppointmentDto> listAppointments(int page, int size) {
