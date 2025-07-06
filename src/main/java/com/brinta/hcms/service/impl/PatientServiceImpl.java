@@ -2,6 +2,7 @@ package com.brinta.hcms.service.impl;
 
 import com.brinta.hcms.dto.PatientDto;
 import com.brinta.hcms.dto.TokenPair;
+import com.brinta.hcms.entity.Branch;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.enums.PatientRegistrationStatus;
@@ -12,6 +13,7 @@ import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.PatientMapper;
+import com.brinta.hcms.repository.BranchRepository;
 import com.brinta.hcms.repository.PatientRepository;
 import com.brinta.hcms.repository.UserRepository;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
@@ -62,6 +64,9 @@ public class PatientServiceImpl implements PatientService {
     @Autowired
     private SecurityUtil securityUtil;
 
+    @Autowired
+    private BranchRepository branchRepository;
+
     private static Authentication getAuthentication1(User userEntity) {
         if (!Roles.PATIENT.name().equalsIgnoreCase(userEntity.getRole().name())) {
             throw new RuntimeException("Access denied: Not a patient account");
@@ -90,7 +95,10 @@ public class PatientServiceImpl implements PatientService {
         user.setRole(Roles.PATIENT);
         user.setName(request.getName());
 
-        Patient patient = patientMapper.register(request, user);
+        Branch branch = branchRepository.findById(request.getBranchId())
+                .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
+
+        Patient patient = patientMapper.register(request, user, branch);
         patient.setUser(user);
         patient.setStatus(PatientRegistrationStatus.ONLINE);
         patient.setProfileStatus(ProfileStatus.COMPLETED);
@@ -117,7 +125,10 @@ public class PatientServiceImpl implements PatientService {
         user.setRole(Roles.PATIENT);
         user.setName(request.getName());
 
-        Patient patient = patientMapper.register(request, user);
+        Branch branch = branchRepository.findById(request.getBranchId())
+                .orElseThrow(() -> new ResourceNotFoundException("Branch not found"));
+
+        Patient patient = patientMapper.register(request, user, branch);
         patient.setUser(user);
         patient.setStatus(PatientRegistrationStatus.OFFLINE);
         patient.setProfileStatus(ProfileStatus.COMPLETED);

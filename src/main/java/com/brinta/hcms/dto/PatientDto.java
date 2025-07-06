@@ -1,5 +1,6 @@
 package com.brinta.hcms.dto;
 
+import com.brinta.hcms.enums.ProfileStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class PatientDto {
 
-    private String id;
+    private Long id;
 
     private String name;
 
@@ -20,6 +21,12 @@ public class PatientDto {
     private String contactNumber;
 
     private String address;
+
+    private ProfileStatus profileStatus;
+
+    private String branchName;
+
+    private String adminEmail;
 
 }
 

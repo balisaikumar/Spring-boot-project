@@ -1,6 +1,7 @@
 package com.brinta.hcms.mapper;
 
 import com.brinta.hcms.dto.PatientDto;
+import com.brinta.hcms.entity.Branch;
 import com.brinta.hcms.entity.Patient;
 import com.brinta.hcms.entity.User;
 import com.brinta.hcms.request.registerRequest.ReferralRequest;
@@ -21,7 +22,8 @@ public interface PatientMapper {
     @Mapping(source = "request.address", target = "address")
     @Mapping(source = "request.email", target = "email")
     @Mapping(source = "user", target = "user")
-    Patient register(RegisterPatientRequest request, User user);
+    @Mapping(source = "branch", target = "branch")
+    Patient register(RegisterPatientRequest request, User user, Branch branch);
 
     void update(UpdatePatientRequest updatePatientRequest, @MappingTarget Patient patient);
 

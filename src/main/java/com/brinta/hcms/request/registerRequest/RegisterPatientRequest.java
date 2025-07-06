@@ -1,7 +1,9 @@
 package com.brinta.hcms.request.registerRequest;
 
 import com.brinta.hcms.enums.PatientRegistrationStatus;
+import com.brinta.hcms.enums.ProfileStatus;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Data
@@ -34,6 +36,11 @@ public class RegisterPatientRequest {
     private String address;
 
     private PatientRegistrationStatus status;
+
+    private ProfileStatus profileStatus;
+
+    @NotNull
+    private Long branchId;
 
 }
 

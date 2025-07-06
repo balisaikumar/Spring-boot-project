@@ -41,5 +41,13 @@ public class Branch {
     @JsonIgnore
     private Set<Doctor> doctors = new HashSet<>();
 
+    @OneToOne
+    @JoinColumn(name = "admin_id", referencedColumnName = "id")
+    private User admin;
+
+    @OneToMany(mappedBy = "branch", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private Set<Patient> patients = new HashSet<>();
+
 }
 

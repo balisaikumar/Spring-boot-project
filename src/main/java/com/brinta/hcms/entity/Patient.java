@@ -49,5 +49,9 @@ public class Patient {
     @Column(name = "profile_status")
     private ProfileStatus profileStatus;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id")
+    @JsonIgnore
+    private Branch branch;
 }
 
