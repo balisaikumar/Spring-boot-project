@@ -3,10 +3,7 @@ package com.brinta.hcms.service.impl;
 import com.brinta.hcms.dto.DoctorAppointmentDto;
 import com.brinta.hcms.dto.DoctorDto;
 import com.brinta.hcms.dto.TokenPair;
-import com.brinta.hcms.entity.Agent;
-import com.brinta.hcms.entity.Doctor;
-import com.brinta.hcms.entity.DoctorAppointment;
-import com.brinta.hcms.entity.User;
+import com.brinta.hcms.entity.*;
 import com.brinta.hcms.enums.AgentType;
 import com.brinta.hcms.enums.AppointmentStatus;
 import com.brinta.hcms.enums.Roles;
@@ -15,10 +12,7 @@ import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
 import com.brinta.hcms.mapper.DoctorMapper;
-import com.brinta.hcms.repository.AgentRepository;
-import com.brinta.hcms.repository.DoctorAppointmentRepository;
-import com.brinta.hcms.repository.DoctorRepository;
-import com.brinta.hcms.repository.UserRepository;
+import com.brinta.hcms.repository.*;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
 import com.brinta.hcms.request.registerRequest.RegisterDoctorRequest;
 import com.brinta.hcms.request.updateRequest.UpdateDoctorRequest;
@@ -45,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -83,6 +78,9 @@ public class DoctorServiceImpl implements DoctorService {
     @Autowired
     private ReferralCodeGenerator referralCodeGenerator;
 
+    @Autowired
+    private BranchRepository branchRepository;
+
     @Override
     public Doctor registerInternalDoctor(RegisterDoctorRequest request) {
         LoggerUtil.info(getClass(), "Attempting internal doctor registration for: {}",
@@ -108,7 +106,11 @@ public class DoctorServiceImpl implements DoctorService {
                 "Internal doctor user created: {}", request.getEmail());
 
         // Map doctor and save
-        Doctor doctor = doctorMapper.register(request);
+        Branch branch = branchRepository.findById(request.getBranchId())
+                .orElseThrow(() -> new ResourceNotFoundException("Branch not found with ID: " + request.getBranchId()));
+
+        Doctor doctor = doctorMapper.register(request, branch);
+        doctor.setBranches(Set.of(branch));
         doctor.setUser(user);
         doctor.setReferralCode(null); // Internal doctor doesn’t need referral code
         LoggerUtil.info(getClass(), "Internal doctor saved successfully: {}",
@@ -170,7 +172,11 @@ public class DoctorServiceImpl implements DoctorService {
                 "Agent saved for external doctor: {}", request.getEmail());
 
         // Save to Doctor table (linked to saved agent)
-        Doctor doctor = doctorMapper.register(request);
+        Branch branch = branchRepository.findById(request.getBranchId())
+                .orElseThrow(() -> new ResourceNotFoundException("Branch not found with ID: " + request.getBranchId()));
+
+        Doctor doctor = doctorMapper.register(request, branch);
+        doctor.setBranches(Set.of(branch));
         doctor.setReferralCode(referralCode);             // Set referral
         doctor.setAgent(savedAgent);                      // Link agent to doctor here
         Doctor savedDoctor = doctorRepository.save(doctor);
@@ -293,6 +299,15 @@ public class DoctorServiceImpl implements DoctorService {
         doctor.setUser(user); // Ensure user is re-set in case of object refresh
 
         Doctor updatedDoctor = doctorRepository.save(doctor);
+
+        // Handle multiple branch IDs
+        if (updateDoctorRequest.getBranchIds() != null && !updateDoctorRequest.getBranchIds().isEmpty()) {
+            Set<Branch> branches = updateDoctorRequest.getBranchIds().stream()
+                    .map(id -> branchRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException("Branch not found with ID: " + id)))
+                    .collect(Collectors.toSet());
+            doctor.setBranches(branches); // <- assign multiple branches
+        }
 
         LoggerUtil.info(getClass(),
                 "Internal doctor [{}] updated successfully by admin.", doctorId);

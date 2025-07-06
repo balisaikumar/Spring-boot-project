@@ -1,11 +1,14 @@
 package com.brinta.hcms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Data
@@ -33,6 +36,10 @@ public class Branch {
     // Flat address string for now, will be refactored to Address entity in future
     @Column(nullable = false)
     private String address;
+
+    @ManyToMany(mappedBy = "branches")
+    @JsonIgnore
+    private Set<Doctor> doctors = new HashSet<>();
 
 }
 

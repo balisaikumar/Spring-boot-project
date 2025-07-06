@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -20,6 +22,8 @@ public class UpdateDoctorRequest {
     private String contactNumber;
 
     private String qualification;
+
+    private List<Long> branchIds;
 
 }
 

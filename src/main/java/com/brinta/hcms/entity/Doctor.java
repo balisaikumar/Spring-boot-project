@@ -8,6 +8,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Getter
 @Setter
@@ -47,6 +50,14 @@ public class Doctor {
     @JoinColumn(name = "agent_id")
     @JsonManagedReference(value = "agent-doctor")
     private Agent agent;
+
+    @ManyToMany
+    @JoinTable(
+            name = "doctor_branch",
+            joinColumns = @JoinColumn(name = "doctor_id"),
+            inverseJoinColumns = @JoinColumn(name = "branch_id")
+    )
+    private Set<Branch> branches = new HashSet<>();
 
 }
 

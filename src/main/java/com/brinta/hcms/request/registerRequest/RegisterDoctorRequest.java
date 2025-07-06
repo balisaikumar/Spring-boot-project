@@ -2,6 +2,7 @@ package com.brinta.hcms.request.registerRequest;
 
 import com.brinta.hcms.enums.AgentType;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,9 @@ public class RegisterDoctorRequest {
     private String qualification;
 
     private AgentType agentType; // Optional for external doctors only
+
+    @NotNull(message = "Branch ID is required")
+    private Long branchId;
 
 }
 
