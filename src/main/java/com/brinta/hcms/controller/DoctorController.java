@@ -6,6 +6,7 @@ import com.brinta.hcms.entity.Doctor;
 import com.brinta.hcms.exception.exceptionHandler.InvalidRequestException;
 import com.brinta.hcms.exception.exceptionHandler.ResourceNotFoundException;
 import com.brinta.hcms.exception.exceptionHandler.UnAuthException;
+import com.brinta.hcms.mapper.DoctorMapper;
 import com.brinta.hcms.request.ForgotPasswordRequest;
 import com.brinta.hcms.request.ResetPasswordRequest;
 import com.brinta.hcms.request.registerRequest.LoginRequest;
@@ -46,6 +47,8 @@ public class DoctorController {
     private DoctorService doctorService;
     @Autowired
     private ForgotPasswordResetService forgotPasswordResetService;
+    @Autowired
+    private DoctorMapper doctorMapper;
 
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
@@ -157,9 +160,10 @@ public class DoctorController {
                                           UpdateDoctorRequest updateDoctorRequest) {
         try {
             Doctor updatedDoctor = doctorService.update(id, updateDoctorRequest);
+            DoctorDto doctorDto = doctorMapper.toDto(updatedDoctor); // DTO conversion
             return ResponseEntity.ok(Map.of(
                     "message", "Doctor updated successfully!",
-                    "doctor", updatedDoctor));
+                    "doctor", doctorDto));
         } catch (ResourceNotFoundException e) {
             log.warn("Update failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
